@@ -1,0 +1,57 @@
+{% extends "main/base.html" %}
+
+{% block title %}License Scanner{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="/static/css/scanner.css">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="scanner-container">
+        <video id="video" autoplay playsinline></video>
+        <canvas id="canvas" style="display: none;"></canvas>
+        <div class="scan-overlay">
+            <div class="scan-area"></div>
+        </div>
+        <div class="controls">
+            <button id="capture-button" class="scan-button">Scan ID</button>
+        </div>
+    </div>
+    <div class="results" style="display: none;">
+        <h3>Scanned Results</h3>
+        <div class="captured-images">
+            <div class="full-capture">
+                <h4>Captured License</h4>
+                <img id="full-capture-preview" class="license-preview">
+            </div>
+            <div class="processed-capture">
+                <h4>Processed Image</h4>
+                <img id="processed-preview" class="license-preview">
+            </div>
+            <div class="face-capture">
+                <h4>Extracted Face</h4>
+                <img id="face-preview" class="face-preview">
+            </div>
+        </div>
+        <div class="license-data">
+            <div class="data-fields">
+                <div class="field">
+                    <label>Name:</label>
+                    <span id="name-result"></span>
+                </div>
+                <div class="field">
+                    <label>License Number:</label>
+                    <span id="license-number-result"></span>
+                </div>
+            </div>
+        </div>
+        <button id="confirm-button" class="confirm-button">Confirm</button>
+        <button id="retry-button" class="retry-button">Try Again</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/license-scanner.js"></script>
+{% endblock %} 

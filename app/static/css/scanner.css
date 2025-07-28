@@ -1,0 +1,250 @@
+body { 
+    color: #606060;
+    font-family: Arial, sans-serif; 
+    text-align: center; 
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;  /* Align to top */
+    height: 100vh;
+    margin: 0;
+    padding-top: 20px;  /* Add some padding from the top */
+}
+
+#mobile-link {
+    color: #007bff;
+    font-weight: bold;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+h1 {
+    font-size: 1.5em;
+    font-weight: bold;
+    margin: 10px;
+}
+
+h2 {
+    color: #2c3e50;
+    font-size: 1.3em;
+    font-weight: bold;
+    margin: 5px;
+}
+
+h3 {
+    font-size: 1.1em;
+    font-weight: normal;
+    margin: 5px;
+}
+
+#qr-container {
+    margin: 20px;
+}
+#reader { 
+    width: 100%; 
+    max-width: 400px; 
+    margin: 20px auto; 
+}
+#result { 
+    margin-top: 20px; 
+    font-size: 18px; 
+    font-weight: bold; 
+    display: none;  /* Initially hidden */
+}
+.container {
+    display: grid;
+    grid-template-columns: 1fr;
+    flex-direction: column;  /* Default to row layout */
+    align-items: flex-start;
+    justify-content: center;
+    gap: 10px;
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+    margin-bottom: 50px;
+}
+.qr-section {
+    text-align: center;
+    width: 300px;  /* Fixed width to match camera section */
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    z-index: 2;
+}
+.camera-section {
+    position: relative;
+    width: 300px;
+    height: 300px;
+    background-color: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    z-index: 1;
+}
+#qr-code {
+    margin-top: 20px;
+}
+#camera {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    transform: scaleX(-1);
+    object-fit: cover;
+}
+#canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    transform: scaleX(-1);
+    opacity: 0;
+    object-fit: contain;
+}
+.status {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 4px;
+    display: none;
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
+    max-width: 90%;
+}
+.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+.scan-region {
+    border: 2px solid #007bff;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 200px;
+    height: 200px;
+    z-index: 2;
+    border-radius: 20px;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+}
+.result-section {
+    display: none;
+    margin-top: 20px;
+    padding: 20px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+    width: 100%;
+    max-width: 500px;
+    z-index: 2;
+}
+.result-section h3 {
+    margin-top: 0;
+    color: #007bff;
+}
+.result-content {
+    word-break: break-all;
+    font-family: monospace;
+    background-color: #fff;
+    padding: 10px;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+}
+#random-number {
+    margin: 5px;
+    padding: 10px;
+    color: #007bff;
+    font-size: 18px;
+    font-weight: bold;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    border: 1px solid #dee2e6;
+}
+
+#status-container {
+    font-size: 0.8em;
+    padding: 5px;
+    margin: 5px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+#embedded-status-container {
+    display: block;
+    font-size: 0.8em;
+    padding: 5px;
+    margin: 5px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Media query for mobile devices */
+@media (max-width: 768px) {
+    .container {
+        flex-direction: column;  /* Stack on mobile */
+        padding: 10px;
+        gap: 20px;
+        align-items: flex-start;
+        justify-content: center;
+        margin: 0 auto;
+
+
+    }
+    .qr-section {
+        width: 100%;
+        max-width: 300px;
+    }
+    .camera-section {
+        width: 100%;
+        max-width: 300px;
+    }
+    #camera {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        transform: scaleX(1);
+        object-fit: cover;
+    }
+}
+
+
+.feature-container {
+    background: white;
+    max-width: 500px;
+    margin: 5px auto;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+}
+ul {
+    list-style: none;
+    padding: 0;
+    margin-bottom: 0px;
+}
+li {
+    font-size: 18px;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #ddd;
+}
+li:last-child {
+    border-bottom: none;
+}
+.icon {
+    width: 20px;
+    height: 20px;
+    margin-right: 10px;
+}

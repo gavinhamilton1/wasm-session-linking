@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebAuthn Registration</title>
+    <script src="https://cdn.jsdelivr.net/npm/cbor-js@0.1.0/cbor.min.js"></script>
+    <style>
+        body {
+            font-family: 'Open Sans', sans-serif;
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .button {
+            background: #0066cc;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .output-container {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+        }
+        .output-section {
+            margin-bottom: 20px;
+        }
+        .output-section h3 {
+            color: #0066cc;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        .output-data {
+            background: #fff;
+            padding: 10px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .output-status {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Create Platform Authenticator</h1>
+        <p>This will create a new hardware-bound passkey with high security requirements.</p>
+        
+        <button id="createPasskeyBtn" class="button">Create Passkey</button>
+        <button id="createCredentialBtn" class="button">Create Local Credential</button>
+        <button id="createSilentCredentialBtn" class="button">Create Silent Credential</button>
+        <button id="getSilentCredentialBtn" class="button">Get Silent Credential</button>
+        <button id="exportPublicKeyBtn" class="button" disabled>Export Public Key</button>
+        <div id="status" class="status"></div>
+        
+        <!-- Add output area -->
+        <div id="output" class="output-container" style="display: none; margin-top: 20px;">
+            <h2>Authentication Details</h2>
+            <div class="output-section">
+                <h3>Browser Identity Key (BIK)</h3>
+                <div id="bikStatus" class="output-status"></div>
+                <pre id="bikPublic" class="output-data">Public Key: Not generated</pre>
+                <pre id="bikPrivate" class="output-data">Private Key: Not generated</pre>
+            </div>
+            <div class="output-section">
+                <h3>Session Encryption Key (SEK)</h3>
+                <pre id="sek" class="output-data">Not received</pre>
+                <pre id="sekIv" class="output-data">IV: Not received</pre>
+            </div>
+            <div class="output-section">
+                <h3>Authenticator Data</h3>
+                <pre id="authData" class="output-data">Not available</pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initial setup
+        let platformAuthenticatorAvailable = false;
+        let localCredential = null;  // Store the credential globally
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('=== WebAuthn Page Initialization ===');
+            
+            // Initialize WebAuthn support check
+            console.log('Checking WebAuthn support...');
+            if (window.PublicKeyCredential) {
+                console.log('✓ WebAuthn is supported');
+                
+                // Check if platform authenticator is available
+                if (PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) {
+                    console.log('Checking platform authenticator...');
+                    const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+                    platformAuthenticatorAvailable = available;
+                    console.log(`✓ Platform authenticator available: ${available}`);
+                    
+                    if (!available) {
+                        showStatus('No platform authenticator (Windows Hello/Touch ID) available', 'error');
+                        document.getElementById('createPasskeyBtn').disabled = true;
+                    }
+                } else {
+                    console.error('✗ Platform authenticator check not available');
+                    showStatus('Platform authenticator not supported', 'error');
+                    document.getElementById('createPasskeyBtn').disabled = true;
+                }
+            } else {
+                console.error('✗ WebAuthn is not supported in this browser');
+                showStatus('WebAuthn is not supported in this browser', 'error');
+                document.getElementById('createPasskeyBtn').disabled = true;
+            }
+            
+            // Check for stored BIK on page load
+            console.log('Starting BIK check...');
+            await checkStoredBik();
+            console.log('=== Initialization Complete ===');
+        });
+
+        function updateBikStatus(isNew = false) {
+            const statusDiv = document.getElementById('bikStatus');
+            const now = new Date();
+            statusDiv.textContent = `BIK ${isNew ? 'created' : 'loaded'} at: ${now.toLocaleString()}`;
+            console.log(`BIK status updated: ${isNew ? 'newly created' : 'loaded from storage'}`);
+        }
+
+        async function checkStoredBik() {
+            console.log('Checking for stored BIK...');
+            const storedBik = localStorage.getItem('browserIdentityKey');
+            console.log('localStorage BIK value:', storedBik);
+            
+            if (storedBik) {
+                try {
+                    const bik = JSON.parse(storedBik);
+                    console.log('Successfully parsed stored BIK:', {
+                        publicKeyAlg: bik.publicKey.alg,
+                        publicKeyCrv: bik.publicKey.crv,
+                        privateKeyAlg: bik.privateKey.alg,
+                        privateKeyCrv: bik.privateKey.crv
+                    });
+                    
+                    document.getElementById('output').style.display = 'block';
+                    document.getElementById('bikPublic').textContent = 
+                        `Public Key: ${JSON.stringify(bik.publicKey, null, 2)}`;
+                    document.getElementById('bikPrivate').textContent = 
+                        `Private Key: ${JSON.stringify(bik.privateKey, null, 2)}`;
+                    updateBikStatus(false);
+                } catch (e) {
+                    console.error('Error parsing stored BIK:', e);
+                    console.error('Raw stored value:', storedBik);
+                }
+            } else {
+                console.log('No BIK found in localStorage');
+            }
+        }
+        
+        document.getElementById('createPasskeyBtn').addEventListener('click', async () => {
+            console.log('Create passkey button clicked');
+            await createPasskey();
+        });
+        
+        // Helper function to encode ArrayBuffer as base64URL string
+        function bufferToBase64URLString(buffer) {
+            const bytes = new Uint8Array(buffer);
+            let str = '';
+            bytes.forEach(byte => {
+                str += String.fromCharCode(byte);
+            });
+            return btoa(str)
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_')
+                .replace(/=/g, '');
+        }
+
+        // Convert string to ArrayBuffer
+        function stringToBuffer(str) {
+            return Uint8Array.from(str, c => c.charCodeAt(0)).buffer;
+        }
+
+        async function createPasskey() {
+            try {
+                const username = 'test@example.com'; // Replace with actual username
+                console.log('Starting passkey creation for:', username);
+                
+                if (!platformAuthenticatorAvailable) {
+                    showStatus('Platform authenticator not available', 'error');
+                    return;
+                }
+                
+                // Check for existing credentials first
+                try {
+                    console.log('Checking for existing credentials...');
+                    const existingCred = await navigator.credentials.get({
+                        publicKey: {
+                            challenge: crypto.getRandomValues(new Uint8Array(32)).buffer,
+                            userVerification: "required"
+                        }
+                    });
+                    
+                    if (existingCred) {
+                        console.log('Found existing credential, getting SEK...');
+                        console.log(existingCred);
+                        
+                        // Send assertion to server to get encrypted SEK
+                        const response = await fetch('/api/webauthn/get-sek', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                assertion: {
+                                    id: bufferToBase64URLString(existingCred.rawId),
+                                    clientDataJSON: bufferToBase64URLString(existingCred.response.clientDataJSON),
+                                    authenticatorData: bufferToBase64URLString(existingCred.response.authenticatorData),
+                                    signature: bufferToBase64URLString(existingCred.response.signature)
+                                }
+                            })
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('Failed to get SEK from server');
+                        }
+
+                        const { encryptedSEK, iv } = await response.json();
+                        console.log('Retrieved encrypted SEK:', { encryptedSEK, iv });
+
+                        // TODO: Decrypt SEK using BIK
+                        showStatus('Retrieved existing passkey and SEK', 'success');
+                        return;
+                    }
+                } catch (e) {
+                    console.log('No existing credential found:', e.message);
+                    // No existing credential found or user cancelled - continue with creation
+                    console.log('No existing credential found, proceeding with creation');
+                }
+
+                console.log('Generating credential creation options...');
+                // Generate random user ID and challenge as ArrayBuffers
+                const userId = crypto.getRandomValues(new Uint8Array(16)).buffer;
+                const challenge = crypto.getRandomValues(new Uint8Array(32)).buffer;
+
+                const publicKeyCredentialCreationOptions = {
+                    challenge: challenge,
+                    rp: {
+                        name: "J.P. Morgan",
+                        id: window.location.hostname
+                    },
+                    user: {
+                        id: userId,
+                        name: username,
+                        displayName: username
+                    },
+                    pubKeyCredParams: [
+                        { alg: -7, type: "public-key" },   // ES256
+                        { alg: -257, type: "public-key" }  // RS256
+                    ],
+                    authenticatorSelection: {
+                        // Force Windows Hello/Touch ID only
+                        authenticatorAttachment: "platform",
+                        residentKey: "required",
+                        userVerification: "required"
+                    },
+                    attestation: "direct",
+                    extensions: {
+                        credProps: true,
+                        prf: {
+                            eval: {
+                                first: new Uint8Array(32)
+                            }
+                        }
+                    },
+                    timeout: 60000
+                };
+
+                console.log('Creating credential with options:', publicKeyCredentialCreationOptions);
+                const credential = await navigator.credentials.create({
+                    publicKey: publicKeyCredentialCreationOptions
+                });
+
+                if (credential) {
+                    console.log('Credential created successfully:', credential);
+                    
+                    console.log('Generating Browser Identity Key (BIK)...');
+                    // Generate Browser Identity Key (BIK)
+                    const browserIdentityKey = await window.crypto.subtle.generateKey(
+                        {
+                            name: "ECDSA",
+                            namedCurve: "P-256"
+                        },
+                        true,
+                        ["sign", "verify"]
+                    );
+                    
+                    console.log('Exporting BIK public key...');
+                    // Export BIK public key
+                    const bikPublicKey = await window.crypto.subtle.exportKey(
+                        "jwk", 
+                        browserIdentityKey.publicKey
+                    );
+
+                    // Export BIK private key
+                    const bikPrivateKey = await window.crypto.subtle.exportKey(
+                        "jwk",
+                        browserIdentityKey.privateKey
+                    );
+
+                    // Store BIK
+                    localStorage.setItem('browserIdentityKey', JSON.stringify({
+                        publicKey: bikPublicKey,
+                        privateKey: bikPrivateKey
+                    }));
+                    updateBikStatus(true);
+
+                    // Show output area
+                    document.getElementById('output').style.display = 'block';
+                    
+                    // Display BIK
+                    document.getElementById('bikPublic').textContent = 
+                        `Public Key: ${JSON.stringify(bikPublicKey, null, 2)}`;
+                    document.getElementById('bikPrivate').textContent = 
+                        `Private Key: ${JSON.stringify(bikPrivateKey, null, 2)}`;
+
+                    const registrationData = {
+                        attestation: {
+                            clientDataJSON: bufferToBase64URLString(credential.response.clientDataJSON),
+                            attestationObject: bufferToBase64URLString(credential.response.attestationObject)
+                        },
+                        browserIdentityKey: bikPublicKey
+                    };
+                    console.log('Sending registration data to server:', registrationData);
+
+                    // Send registration data to server
+                    const response = await fetch('/api/webauthn/register-passkey', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(registrationData)
+                    });
+
+                    console.log('Server response status:', response.status);
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        console.error('Server error response:', errorData);
+                        throw new Error(errorData.detail || 'Failed to register passkey with server');
+                    }
+
+                    // Get Session Encryption Key (SEK) from server response
+                    const { encryptedSEK, iv } = await response.json();
+                    console.log('Received SEK from server:', { encryptedSEK, iv });
+                    
+                    // Display SEK
+                    document.getElementById('sek').textContent = 
+                        `Encrypted SEK: ${encryptedSEK}`;
+                    document.getElementById('sekIv').textContent = 
+                        `IV: ${iv}`;
+
+                    // Decode and log attestation object details
+                    console.log('Decoding attestation details...');
+                    const attestationBuffer = credential.response.attestationObject;
+                    const attestationObject = CBOR.decode(attestationBuffer);
+                    
+                    // Parse authenticator data
+                    const authData = new Uint8Array(attestationObject.authData);
+                    const dataView = new DataView(authData.buffer);
+                    
+                    // Parse credential data
+                    let credentialData = {};
+                    const flags = authData[32];
+                    if (flags & 0x40) { // If attested credential data present
+                        let offset = 37; // Start after rpIdHash(32) + flags(1) + signCount(4)
+                        
+                        credentialData = {
+                            aaguid: authData.slice(offset, offset + 16),
+                            credentialIdLength: dataView.getUint16(offset + 16),
+                            credentialId: authData.slice(offset + 18, offset + 18 + dataView.getUint16(offset + 16)),
+                            publicKey: authData.slice(offset + 18 + dataView.getUint16(offset + 16))
+                        };
+                    }
+                    
+                    // Display auth data details
+                    document.getElementById('authData').textContent = 
+                        JSON.stringify({
+                            rpIdHash: Array.from(authData.slice(0, 32))
+                                .map(b => b.toString(16).padStart(2, '0'))
+                                .join(''),
+                            flags: {
+                                userPresent: !!(authData[32] & 0x01),
+                                userVerified: !!(authData[32] & 0x04),
+                                attestedCredentialData: !!(authData[32] & 0x40),
+                                extensionDataIncluded: !!(authData[32] & 0x80)
+                            },
+                            signCount: dataView.getUint32(33),
+                            aaguid: credentialData.aaguid ? 
+                                Array.from(credentialData.aaguid)
+                                    .map(b => b.toString(16).padStart(2, '0'))
+                                    .join('') : 
+                                null,
+                            credentialId: credentialData.credentialId ? 
+                                bufferToBase64URLString(credentialData.credentialId) : 
+                                null,
+                            publicKey: credentialData.publicKey ?
+                                Array.from(credentialData.publicKey)
+                                    .map(b => b.toString(16).padStart(2, '0'))
+                                    .join('') :
+                                null
+                        }, null, 2);
+
+                    showStatus('Passkey and BIK registered successfully!', 'success');
+                }
+
+            } catch (error) {
+                console.error('Error in createPasskey:', error);
+                console.error('Error stack:', error.stack);
+                showStatus(`Error: ${error.message}`, 'error');
+                console.error('Error creating passkey:', error);
+            }
+        }
+
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+        }
+
+        // Add event listeners for the new buttons
+        document.getElementById('createCredentialBtn').addEventListener('click', async () => {
+            try {
+                const publicKeyCredentialCreationOptions = {
+                    challenge: crypto.getRandomValues(new Uint8Array(32)).buffer,
+                    rp: {
+                        name: "Local Test",
+                        id: window.location.hostname
+                    },
+                    user: {
+                        id: crypto.getRandomValues(new Uint8Array(16)).buffer,
+                        name: "local@test.com",
+                        displayName: "Local Test User"
+                    },
+                    pubKeyCredParams: [
+                        { alg: -7, type: "public-key" }  // ES256
+                    ],
+                    authenticatorSelection: {
+                        userVerification: "discouraged"  // No user verification required
+                    },
+                    timeout: 60000
+                };
+
+                localCredential = await navigator.credentials.create({
+                    publicKey: publicKeyCredentialCreationOptions
+                });
+
+                if (localCredential) {
+                    showStatus('Credential created successfully!', 'success');
+                    document.getElementById('exportPublicKeyBtn').disabled = false;
+                }
+            } catch (error) {
+                console.error('Error creating credential:', error);
+                showStatus(`Error: ${error.message}`, 'error');
+            }
+        });
+
+        document.getElementById('createSilentCredentialBtn').addEventListener('click', async () => {
+            try {
+                const publicKeyCredentialCreationOptions = {
+                    challenge: crypto.getRandomValues(new Uint8Array(32)).buffer,
+                    rp: {
+                        name: "Local Test",
+                        id: window.location.hostname
+                    },
+                    user: {
+                        id: crypto.getRandomValues(new Uint8Array(16)).buffer,
+                        name: "local@test.com",
+                        displayName: "Local Test User"
+                    },
+                    pubKeyCredParams: [
+                        { alg: -7, type: "public-key" }  // ES256
+                    ],
+                    authenticatorSelection: {
+                        authenticatorAttachment: "platform",
+                        userVerification: "discouraged",
+                        residentKey: "required",
+                        requireResidentKey: true
+                    },
+                    attestation: "none",  // Minimize UI prompts
+                    timeout: 60000
+                };
+
+                localCredential = await navigator.credentials.create({
+                    publicKey: publicKeyCredentialCreationOptions
+                });
+
+                if (localCredential) {
+                    showStatus('Silent credential created successfully!', 'success');
+                    console.log('Created credential:', localCredential);
+                }
+            } catch (error) {
+                console.error('Error creating silent credential:', error);
+                showStatus(`Error: ${error.message}`, 'error');
+            }
+        });
+
+        document.getElementById('getSilentCredentialBtn').addEventListener('click', async () => {
+            try {
+                const silentGet = await navigator.credentials.get({
+                    mediation: "silent",  // This makes it silent - no UI
+                    publicKey: {
+                        challenge: crypto.getRandomValues(new Uint8Array(32)).buffer,
+                        timeout: 60000,
+                        userVerification: "discouraged"
+                    }
+                });
+
+                if (silentGet) {
+                    showStatus('Silent credential retrieved successfully!', 'success');
+                    console.log('Retrieved silent credential:', silentGet);
+                    
+                    // Also log the credential ID in base64 format for reference
+                    const credentialIdBase64 = bufferToBase64URLString(silentGet.rawId);
+                    console.log('Credential ID (Base64URL):', credentialIdBase64);
+                }
+            } catch (error) {
+                console.error('Error getting silent credential:', error);
+                showStatus(`Error: ${error.message}`, 'error');
+            }
+        });
+
+        document.getElementById('exportPublicKeyBtn').addEventListener('click', async () => {
+            if (!localCredential) {
+                showStatus('No credential available. Create one first.', 'error');
+                return;
+            }
+
+            try {
+                const attestationObject = CBOR.decode(localCredential.response.attestationObject);
+                const authData = new Uint8Array(attestationObject.authData);
+                
+                // Skip rpIdHash(32) + flags(1) + signCount(4) + aaguid(16) + credIdLen(2)
+                let offset = 55;
+                const credentialIdLength = (authData[offset - 2] << 8) + authData[offset - 1];
+                offset += credentialIdLength;
+
+                // The remaining data is the COSE public key
+                const publicKeyBytes = authData.slice(offset);
+                const publicKeyB64 = bufferToBase64URLString(publicKeyBytes.buffer);
+
+                // Log the public key to console
+                console.log('Raw Public Key Bytes:', publicKeyBytes);
+                console.log('Public Key (Base64URL):', publicKeyB64);
+
+                // Display the public key in the UI
+                const outputArea = document.createElement('pre');
+                outputArea.textContent = `Public Key (Base64URL): ${publicKeyB64}`;
+                outputArea.style.wordBreak = 'break-all';
+                outputArea.style.whiteSpace = 'pre-wrap';
+                outputArea.style.margin = '20px 0';
+                outputArea.style.padding = '10px';
+                outputArea.style.backgroundColor = '#f5f5f5';
+                outputArea.style.border = '1px solid #ddd';
+                outputArea.style.borderRadius = '4px';
+
+                // Add to the output container
+                document.getElementById('output').style.display = 'block';
+                document.getElementById('output').appendChild(outputArea);
+
+                showStatus('Public key exported successfully!', 'success');
+            } catch (error) {
+                console.error('Error exporting public key:', error);
+                showStatus(`Error: ${error.message}`, 'error');
+            }
+        });
+    </script>
+</body>
+</html>

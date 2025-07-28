@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<!-- saved from url=(0040)https://idas2.jpmorganchase.com/adfs/ls/ -->
+<html lang="en-US" class=" edxnvpflw idc0_350"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=1">
+        <meta http-equiv="cache-control" content="no-cache,no-store">
+        <meta http-equiv="pragma" content="no-cache">
+        <meta http-equiv="expires" content="-1">
+        <meta name="mswebdialog-title" content="Connecting to idas2.jpmorganchase.com">
+        <title>Sign In</title>        
+        <link rel="stylesheet" type="text/css" href="./style.css"><style>.illustrationClass {background-image:url(/adfs/portal/illustration/illustration.png?id=183128A3C941EDE3D9199FA37D6AA90E0A7DFE101B37D10B4FEDA0CF35E11AFD);}
+
+        </style>
+
+
+
+        <script>
+            let globalUuid = null;
+            let socketState = 'OPEN';
+        </script>
+    
+        <script type="module">
+            import init, { verify_domain_and_display_qr } from "./pkg/wasm_domain_verification.js";
+    
+            // Define the function and attach it to the window object
+            window.store_uuid_in_js = function(uuid) {
+                globalUuid = uuid;
+                console.log("UUID stored in global variable:", globalUuid);
+            };
+    
+    
+            async function run() {
+                await init();
+                try {
+                    await verify_domain_and_display_qr();
+                    setupWebSocket();
+                } catch (e) {
+                    console.error("WASM execution failed:", e);
+                }
+            }
+            window.onload = run;
+        </script>
+    
+        <script>
+            window.addEventListener('error', function(event) {
+                console.error(event.message);
+            });
+    
+            function processMessage(message) {
+                try {
+                    let data = JSON.parse(message);
+                    if (data.status === 'SESSION_OK') {
+                        console.log("Session is OK");
+                        document.getElementById('qr-container').remove();
+                        document.getElementById('status-container').innerHTML = "Session is OK: " + data.aprilTags;
+                    
+                        // Close the WebSocket connection
+                        if (window.ws) {
+                            console.log("Closing WebSocket connection");
+                            socketState = 'CLOSED';
+                            window.ws.close(1000, "Session completed"); // 1000 is the normal closure status code
+                        }
+                    }
+                } catch (error) {
+                    console.log("Received message:", message);
+                }
+            }
+    
+            // Add WebSocket state monitoring
+            function updateWebSocketState() {
+                if (ws) {
+                    const states = ['CONNECTING', 'OPEN', 'CLOSING', 'CLOSED'];
+                    console.log("WebSocket state: ", states[ws.readyState]);
+                }
+            }
+            
+            // Add network status monitoring
+            window.addEventListener('online', () => console.log("Network: Online"));
+            window.addEventListener('offline', () => console.log("Network: Offline"));
+            
+            // WebSocket handling with debug info
+            function setupWebSocket() {
+    
+                if (!globalUuid) {
+                    console.error("Global UUID is not set. Cannot establish WebSocket connection.");
+                    setTimeout(() => {
+                        setupWebSocket();
+                    }, 1000);
+                    return;
+                }
+    
+                const sessionId = globalUuid
+                const uuid = crypto.randomUUID();
+                console.log("Setting up WebSocket with session ID:", sessionId);
+                
+                // Determine if we need to use secure WebSocket (wss://) based on the page protocol
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${protocol}//${window.location.host}/ws/${sessionId}/${uuid}`;
+                
+                console.log(`Connecting to WebSocket at: ${wsUrl}`);
+                // Create WebSocket connection
+                const ws = new WebSocket(wsUrl);
+                
+                // Connection opened
+                ws.onopen = () => {
+                    console.log('WebSocket connection established');
+                    updateWebSocketState();
+                };
+                
+                // Listen for messages
+                ws.onmessage = (event) => {
+                    console.log('Received from server:', event.data);
+                    processMessage(event.data);
+                };
+                
+                // Connection closed
+                ws.onclose = (event) => {
+                    console.log('WebSocket connection closed', event.code, event.reason);
+                    updateWebSocketState();
+                    
+                    // Try to reconnect after a delay
+                    if (socketState != 'CLOSED') {
+                        setTimeout(() => {
+                            console.log('Attempting to reconnect WebSocket...');
+                            setupWebSocket();
+                        }, 5000);
+                    }
+                };
+                
+                // Connection error
+                ws.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    updateWebSocketState();
+                };
+                
+                // Store the WebSocket instance globally
+                window.ws = ws;
+                return ws;
+            }
+        </script>
+
+
+
+
+</head>
+    <body dir="ltr" class="body">
+    <div id="noScript" style="position: static; width: 100%; height: 100%; z-index: 100; display: none;">
+        <h1>JavaScript required</h1>
+        <p>JavaScript is required. This web browser does not support JavaScript or JavaScript in this web browser is not enabled.</p>
+        <p>To find out if your web browser supports JavaScript or to enable JavaScript, see web browser help.</p>
+    </div>
+    <script type="text/javascript" language="JavaScript">
+         document.getElementById("noScript").style.display = "none";
+    </script>
+    <div id="fullPage">
+        
+        <div style="background-color: white;"><div class="preHeader"></div><header class="header"><div id="header-right"><div class="header-item-container"><div class="combo js-select"><div id="combo1-label" class="combo-label">Login Domain</div><div><div aria-controls="listbox1" aria-expanded="false" aria-haspopup="listbox" aria-labelledby="combo1-label" id="combo1" class="combo-input" role="combobox" tabindex="0">Default</div><div class="combo-menu" role="listbox" id="listbox1" aria-labelledby="combo1-label" tabindex="-1"><div role="option" id="combo1-0" class="combo-option option-current" aria-selected="false">Default</div><div role="option" id="combo1-1" class="combo-option" aria-selected="false">ASIAPAC</div><div role="option" id="combo1-2" class="combo-option" aria-selected="false">EMEA</div><div role="option" id="combo1-3" class="combo-option" aria-selected="false">NAEAST</div><div role="option" id="combo1-4" class="combo-option" aria-selected="false">NAWEST</div><div role="option" id="combo1-5" class="combo-option" aria-selected="false">RB</div></div></div></div></div></div></header></div><div id="contentWrapper" class="float">
+            <div id="content"><div id="background-top"><section id="welcome-message" aria-label="Welcome message"><field id="welcome-text" type="staticText">Welcome.</field></section></div>
+                
+                <main>
+                    <div id="workArea">
+                        
+    <div id="authArea" class="groupMargin">
+        
+        
+        <div id="loginArea">
+    
+
+    <div id="primaryOptionsPage" style="display: none;">
+    <div id="optionsBannerContainer" class="bannerContainer">
+        <div id="optionsBackButton" class="back" tabindex="0" role="button" onkeypress="if (event &amp;&amp; (event.keyCode == 32 || event.keyCode == 13)) paginationManager.displayPreviousPage();" onclick="return paginationManager.displayPreviousPage();" aria-label="Back">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2048 2048" width="15" height="15" fill="currentColor" style="margin-top: 5Px;">
+                <path d="M2048 960q0 26-19 45t-45 19H219l786 787q19 19 19 45t-19 45-45 19q-26 0-45-19L22 1008q-11-11-16-22t-6-26q0-15 5-26t17-22L915 19q19-19 45-19t45 19 19 45q0 26-19 45L219 896h1765q26 0 45 19t19 45z"></path>
+            </svg>
+        </div>
+        <div id="identityBannerOptions" class="identityBanner"></div>
+    </div>
+    <div id="primaryAuthOptionsTitle" class="authOptionsTitlePaginated">Authentication options</div>
+    <div id="errorOption" class="error authOptionsError smallText">
+        <span id="errorTextOption" class="authOptionsErrorText" for="" aria-live="assertive" role="alert"></span>
+    </div>
+    <input id="optionForms" type="hidden" name="AuthMethod" value="FormsAuthentication">
+         <div id="authOptions">
+         <form id="options" method="post" action="https://idas2.jpmorganchase.com/adfs/ls/?client-request-id=14d1017b-637b-48b0-0c29-0340070000fe">
+             <script type="text/javascript">
+                function SelectOption(option) {
+                    var w = document.getElementById('waitingWheelDiv');
+                    if(w) w.style.display = 'inline';
+                    var i = document.getElementById('optionSelection');
+                    i.value = option;
+                    document.forms['options'].submit();
+                    return false;
+                }
+             </script>
+             <input id="optionSelection" type="hidden" name="AuthMethod">
+             <input id="userNameInputOptionsHolder" name="UserName" value="" type="hidden">
+             <div id="authOptionLinks" class="groupMargin"><div id="optionsContainer" class="optionButtonContainer" onclick="paginationManager.displayNextPage(); return false;" onkeypress="if (event &amp;&amp; (event.keyCode == 32 || event.keyCode == 13)) paginationManager.displayNextPage(); return false;"><div id="optionIcon"><img alt="icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAACXBIWXMAAAsSAAALEgHS3X78AAAA9UlEQVRIie2V4W3CMBSEPyr+wwhsQJggvg0YoRvACIzQEToCTPBgA0agG7BBKkuHZIhF/ySVqHpSZPvsd+f4PdmTrusYE2+jqv+GwSSlNOoZTd2egOPA2globwbHiNgNqS4p67Wvn+TXN5jWSEnJVXAFPiPiKmkBvHtJ5i6S5ubmLpReJfYMLLQHZqbyeGtuaW4NNECulI25raQmG5d6tSNaFOJYiEK87DcFN3PsHWoGZ+CrGO/dHgru8DCHY84/GuTz9s4ErCLiw/zanNzHcyvzjWPvUE2yF/YSVktiRPR2/fQPhsbfeQ9Gv65bf4Pj/9F/DuAbVoZQOfjl+HcAAAAASUVORK5CYII="></div><span role="button" class="optionButton" tabindex="0" href="#" id="FormsAuthentication" onclick="paginationManager.displayNextPage(); return false;" onkeypress="if (event &amp;&amp; (event.keyCode == 32 || event.keyCode == 13)) paginationManager.displayNextPage(); return false;">Password</span></div><div id="optionsContainer" class="optionButtonContainer" onclick="SelectOption(&#39;ArculixADFSPlugin&#39;); return false;" onkeypress="if (event &amp;&amp; (event.keyCode == 32 || event.keyCode == 13)) SelectOption(&#39;ArculixADFSPlugin&#39;); return false;"><div id="optionIcon"><img alt="icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAACXBIWXMAAAsSAAALEgHS3X78AAABM0lEQVRIDe1V0U3DQAx9QR0AJqBskA2SN0G7AbBBOgEdoRsQNggTuGxQNigbhAmCLN5J6eVEI5QggfCPc87de/azdZd1XYc57WJW9J8gyMqynFWjhfwLgP3E2CWAIhDszWw7JTpJxyt+f5MXqSDJCsAaQG1mNck7rS8BHAFUZtZKBte6BdD43rMEJB3gWsvQ+Ef5d9dVRE74AOBN+1d+1sxOhiUlkWfzGsU2AK4ALLVeyd8AyEUCEZ/YgMDM/EATxXYuiUuj0LO8y3NQBRsza2K80U0mWfckqRJbKpL5twhIema3yjw3s6Mq8yFw2e5VxYA4OUUR+LKnuWvckPRvn6Cd5Fzr/+A2OEvQayw0QcFaEQbZnkaNKT5L3yrDYNkI8qT9nfdg9uu6iBo4mf0/+l8bgA/2U2G6PTxJhAAAAABJRU5ErkJggg=="></div><span role="button" class="optionButton" tabindex="0" href="#" id="ArculixADFSPlugin" onclick="SelectOption(&#39;ArculixADFSPlugin&#39;); return false;" onkeypress="if (event &amp;&amp; (event.keyCode == 32 || event.keyCode == 13)) SelectOption(&#39;ArculixADFSPlugin&#39;); return false;">Arculix Authentication</span></div><div id="waitingWheelDiv" style="display: none;"><div id="WaitingWheel">
+    <!-- NOTE: This style portion is identical to cookie pull page, they are not in shared css file because of legacy dependancies for custom themes-->
+    <!-- CSS for small "waiting" wheel -->
+    <style>
+        #floatingCirclesG {
+            position: relative;
+            width: 125px;
+            height: 125px;
+            margin: auto;
+            transform: scale(0.4);
+            -o-transform: scale(0.4);
+            -ms-transform: scale(0.4);
+            -webkit-transform: scale(0.4);
+            -moz-transform: scale(0.4);
+        }
+
+        .f_circleG {
+            position: absolute;
+            height: 22px;
+            width: 22px;
+            border-radius: 12px;
+            -o-border-radius: 12px;
+            -ms-border-radius: 12px;
+            -webkit-border-radius: 12px;
+            -moz-border-radius: 12px;
+            animation-name: f_fadeG;
+            -o-animation-name: f_fadeG;
+            -ms-animation-name: f_fadeG;
+            -webkit-animation-name: f_fadeG;
+            -moz-animation-name: f_fadeG;
+            animation-duration: 1.2s;
+            -o-animation-duration: 1.2s;
+            -ms-animation-duration: 1.2s;
+            -webkit-animation-duration: 1.2s;
+            -moz-animation-duration: 1.2s;
+            animation-iteration-count: infinite;
+            -o-animation-iteration-count: infinite;
+            -ms-animation-iteration-count: infinite;
+            -webkit-animation-iteration-count: infinite;
+            -moz-animation-iteration-count: infinite;
+            animation-direction: normal;
+            -o-animation-direction: normal;
+            -ms-animation-direction: normal;
+            -webkit-animation-direction: normal;
+            -moz-animation-direction: normal;
+        }
+
+        #frotateG_01 {
+            left: 0;
+            top: 51px;
+            animation-delay: 0.45s;
+            -o-animation-delay: 0.45s;
+            -ms-animation-delay: 0.45s;
+            -webkit-animation-delay: 0.45s;
+            -moz-animation-delay: 0.45s;
+        }
+
+        #frotateG_02 {
+            left: 15px;
+            top: 15px;
+            animation-delay: 0.6s;
+            -o-animation-delay: 0.6s;
+            -ms-animation-delay: 0.6s;
+            -webkit-animation-delay: 0.6s;
+            -moz-animation-delay: 0.6s;
+        }
+
+        #frotateG_03 {
+            left: 51px;
+            top: 0;
+            animation-delay: 0.75s;
+            -o-animation-delay: 0.75s;
+            -ms-animation-delay: 0.75s;
+            -webkit-animation-delay: 0.75s;
+            -moz-animation-delay: 0.75s;
+        }
+
+        #frotateG_04 {
+            right: 15px;
+            top: 15px;
+            animation-delay: 0.9s;
+            -o-animation-delay: 0.9s;
+            -ms-animation-delay: 0.9s;
+            -webkit-animation-delay: 0.9s;
+            -moz-animation-delay: 0.9s;
+        }
+
+        #frotateG_05 {
+            right: 0;
+            top: 51px;
+            animation-delay: 1.05s;
+            -o-animation-delay: 1.05s;
+            -ms-animation-delay: 1.05s;
+            -webkit-animation-delay: 1.05s;
+            -moz-animation-delay: 1.05s;
+        }
+
+        #frotateG_06 {
+            right: 15px;
+            bottom: 15px;
+            animation-delay: 1.2s;
+            -o-animation-delay: 1.2s;
+            -ms-animation-delay: 1.2s;
+            -webkit-animation-delay: 1.2s;
+            -moz-animation-delay: 1.2s;
+        }
+
+        #frotateG_07 {
+            left: 51px;
+            bottom: 0;
+            animation-delay: 1.35s;
+            -o-animation-delay: 1.35s;
+            -ms-animation-delay: 1.35s;
+            -webkit-animation-delay: 1.35s;
+            -moz-animation-delay: 1.35s;
+        }
+
+        #frotateG_08 {
+            left: 15px;
+            bottom: 15px;
+            animation-delay: 1.5s;
+            -o-animation-delay: 1.5s;
+            -ms-animation-delay: 1.5s;
+            -webkit-animation-delay: 1.5s;
+            -moz-animation-delay: 1.5s;
+        }
+
+        @keyframes f_fadeG {
+            0% {
+                background-color: rgb(47, 146, 212);
+            }
+
+            100% {
+                background-color: rgb(255, 255, 255);
+            }
+        }
+
+        @-o-keyframes f_fadeG {
+            0% {
+                background-color: rgb(47, 146, 212);
+            }
+
+            100% {
+                background-color: rgb(255, 255, 255);
+            }
+        }
+
+        @-ms-keyframes f_fadeG {
+            0% {
+                background-color: rgb(47, 146, 212);
+            }
+
+            100% {
+                background-color: rgb(255, 255, 255);
+            }
+        }
+
+        @-webkit-keyframes f_fadeG {
+            0% {
+                background-color: rgb(47, 146, 212);
+            }
+
+            100% {
+                background-color: rgb(255, 255, 255);
+            }
+        }
+
+        @-moz-keyframes f_fadeG {
+            0% {
+                background-color: rgb(47, 146, 212);
+            }
+
+            100% {
+                background-color: rgb(255, 255, 255);
+            }
+        }
+    </style>
+
+    <!-- Div containing small "waiting" wheel -->
+    <div id="floatingCirclesG">
+        <div class="f_circleG" id="frotateG_01"></div>
+        <div class="f_circleG" id="frotateG_02"></div>
+        <div class="f_circleG" id="frotateG_03"></div>
+        <div class="f_circleG" id="frotateG_04"></div>
+        <div class="f_circleG" id="frotateG_05"></div>
+        <div class="f_circleG" id="frotateG_06"></div>
+        <div class="f_circleG" id="frotateG_07"></div>
+        <div class="f_circleG" id="frotateG_08"></div>
+    </div>
+</div></div></div>
+         </form>
+      </div>
+</div>
+
+    <div id="passwordPage" style="display: none;">
+    <div id="passwordBannerContainer" class="bannerContainer">
+        <div id="backButton" class="back" tabindex="0" role="button" onkeypress="if (event &amp;&amp; (event.keyCode == 32 || event.keyCode == 13)) paginationManager.displayPreviousPage();" onclick="return paginationManager.displayPreviousPage();" aria-label="Back">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2048 2048" width="15" height="15" fill="currentColor" style="margin-top: 5Px;">
+                <path d="M2048 960q0 26-19 45t-45 19H219l786 787q19 19 19 45t-19 45-45 19q-26 0-45-19L22 1008q-11-11-16-22t-6-26q0-15 5-26t17-22L915 19q19-19 45-19t45 19 19 45q0 26-19 45L219 896h1765q26 0 45 19t19 45z"></path>
+            </svg>
+        </div>
+        <div id="identityBanner" class="identityBanner"></div>
+    </div>
+    <div id="formsAuthenticationAreaPassword">
+        <form method="post" id="loginForm" autocomplete="off" class="paginatedPageForm" novalidate="novalidate" onkeypress="if (event &amp;&amp; event.keyCode == 13) return Login.submitLoginRequest();" action="https://idas2.jpmorganchase.com/adfs/ls/?client-request-id=14d1017b-637b-48b0-0c29-0340070000fe">
+            <input id="userNameInputHolder" name="UserName" value="" type="hidden">
+            <input id="kmsiHolder" name="Kmsi" value="" type="hidden">
+            <input id="formsAuthMethod" type="hidden" name="AuthMethod" value="FormsAuthentication">
+            <div id="passwordArea">
+                <label id="passwordInputLabel" for="passwordInput" class="hidden">Password</label>
+                <input id="passwordInput" name="Password" type="password" tabindex="0" class="text textPaginated fullWidth" placeholder="Password" autocomplete="off">
+            </div>
+            <span id="submitButton" class="submit submitPaginated" tabindex="0" role="button" onkeypress="if (event &amp;&amp; (event.keyCode == 32 || event.keyCode == 13)) Login.submitLoginRequest();" onclick="return Login.submitLoginRequest();">Sign in</span>
+        </form>
+        <div id="errorPassword" class="fieldMargin error smallText">
+            <span id="errorTextPassword" for="" class="errorText" aria-live="assertive" role="alert"></span>
+        </div>
+    </div>
+</div>
+
+
+    <script type="text/javascript">
+        var options = {
+            pages: ["usernamePage","primaryOptionsPage","passwordPage"],
+            currentPageIndex: 0
+        };
+        paginationManager.Initialize(options);
+    </script>
+<div class="pla-content" id="main-login-window" style="display: flex;"><div class="preHeader"></div><div class="loginOption"><div class="optionInnerDiv"><div style="display: flex; align-items: center;"><div style="display: flex; align-items: flex-end;"><svg style="padding-right: 10px;" width="44" height="54" viewBox="0 0 44 52" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><rect width="44" height="54" fill="url(#pattern0_1969_27)"></rect><defs><pattern id="pattern0_1969_27" patternContentUnits="objectBoundingBox" width="1" height="1"><use xlink:href="#image0_1969_27" transform="matrix(0.00100503 0 0 0.000818909 0 -0.000763075)"></use></pattern><image id="image0_1969_27" width="995" height="1223" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA+MAAATHCAMAAACxwFZMAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA/dpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDkuMC1jMDAwIDc5LjE3MWMyN2ZhYiwgMjAyMi8wOC8xNi0yMjozNTo0MSAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtbG5zOmRjPSJodHRwOi8vcHVybC5vcmcvZGMvZWxlbWVudHMvMS4xLyIgeG1wTU06T3JpZ2luYWxEb2N1bWVudElEPSJ1dWlkOjVEMjA4OTI0OTNCRkRCMTE5MTRBODU5MEQzMTUwOEM4IiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjU4MDdEQzBEQkU1NDExRUVBMjhBOEMxQThERkE3QzFGIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjU4MDdEQzBDQkU1NDExRUVBMjhBOEMxQThERkE3QzFGIiB4bXA6Q3JlYXRvclRvb2w9IkFkb2JlIElsbHVzdHJhdG9yIDI3LjEgKE1hY2ludG9zaCkiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDpiZDM5M2I2OC05MDkyLTRlM2ItYjdhYy1jYWI1MjE1YWRjMzUiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5k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M84444wzzjjjjDPOOOOMi3HGGRfjjDPOOOOMM84444wzzjjjjDPOOOOMM84444yL8c7+sg9r8/rYpfHFY1yM9/SXMc4444wzzjjjjDMuxhlnXIwzzjjjjDPOOOOMM84444wzzjjjjDPOOOOMM84444wzLsYZZ1x5xlttIOOtxjjjjDPOOOOMM84444wzzjjjjDPOOOOMM84444wzLsYZZ1yMM84444wzzjjjjDPOOOOMM84444wzzjjjjDMuxhlnXIwzzjjjjDPOOOOMM84444wzzjjjjDPOOOOMMy7GGWdcQcZLblHjaTHOOOOMM84444wzzjjjjItxxhkX44wzzjjjjDPOOOOMM84444wzzjjjjDPOOOOMi3HGGRfjjDPOOOOMM84444wzzjjjjDPOOOOMM874T47WuujDDz/lw6//k4+LGv+2/D9n492/9gfGGfeup7dejbTx6/9kc1Hjrbxtau2dvxDjjDPOOOOMM84444wzzjjjjDPOOOOMM864GGeccTHOOOOMM84444wzzjjjjDPOOOOMM84444wzzrgYZ5xxMc4444wzzjjjjDPOOOOMM84444wzzjjjjDPOOOOMM864wo2X/F7WD8v/4M0FjXsvq6oxXsVHsTauX4JxxsU444z7KBhnnHHGGRfjjDMuxhlnnHHGGWecccYZZ5xxMc444z4KxhlnnHHGxTjjjItxxhlnnHHGGWecccYZZ1yMM864GGec8Tb/7Yu/AGmjxQO02dtHMdT/JRhnnHHGGWecccYZZ5xxxsU444yLccYZZ5xxxhlnnHHGGWecccYZZ5xxxhlnnHHGxTjjjItxxhlnnHHGGWecccYZZ5xxxhlnnHHGGWecccbFOOOMi3HGGWecccYZZ5xxxhlnvN42ljceEeOMM84444wzzjjjjDPOuBhnnHExzjjjjDPOOOOMM84444wzzjjjjDPOOOOMM864GGeccTHOOOOMM84444wzzjjjjDPOOOOMM84444z/2IeNzvvQtfEefocvjDNe47ueun5P0qLGe/gdNhhnnHHGGWecccYZZ5xxxhlnnHHGGWecccYZZ5xxxsU444yLccYTjT/vks0448nGd7YhZ5zxaOMzyBlnPNs45IwzHm4ccsYZDzcOOeOMhxuHnHHGw41Dzjjj4cYhZ5zxcOOQM854uHHIGWc83DjkjDMebhzyQOPf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"></image></defs></svg><h1>Smart Log On</h1></div><button aria-label="information button" id="information-button"><svg alt="information icon" id="information-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="icon" style="color: rgb(9, 117, 149); height: 20px;"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12C23.993 5.376 18.624.007 12 0zm0 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10c-.006 5.52-4.48 9.994-10 10zm.25-17a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm2.25 13.5h-4a1 1 0 110-2h.75a.25.25 0 00.25-.25v-4.5a.25.25 0 00-.25-.25h-.75a1 1 0 110-2h1a2 2 0 012 2v4.75c0 .138.112.25.25.25h.75a1 1 0 110 2z" fill="currentColor"></path></svg></button></div><div id="qr-option-box"><div><p id="smart-logon-description">Scan the QR code with your phone's camera or from Smart Log On mobile app to log on quickly and securely. Alternatively, enter your Username (SID) and password below.</p><br></div>
+
+<div id="qrcode">
+    <div id="qr-container">
+    </div>
+    <div id="status-container" class="embedded-status-container"></div>
+
+</div>
+</div>
+</div>
+</div>
+<div>
+    <div id="or-inner">
+        <hr>
+        <div id="or-eclipse">
+            <p class="font-weight-bold">Or</p>
+        </div>
+        <hr>
+    </div>
+</div>
+<div id="usernamePage" style="display: block;">
+    <div class="optionInnerDiv"><span id="header-error-text"></span>
+        <div class="interactive">
+            <div id="loginMessage" class="groupMargin">Sign in</div>
+            <form method="post" id="loginFormPaginated" class="paginatedPageForm" autocomplete="off"
+                novalidate="novalidate" onkeypress="if (event &amp;&amp; event.keyCode == 13) event.preventDefault();"
+                action="https://idas2.jpmorganchase.com/adfs/ls/?client-request-id=14d1017b-637b-48b0-0c29-0340070000fe">
+                <div id="formsAuthenticationArea">
+                    <div id="userNameArea" style="display: block;">
+                        <label id="userNameInputLabel" for="userNameInput" class="hidden">Username (SID)</label>
+                        <input id="userNameInput" name="UserName" type="username" value="" tabindex="0"
+                            class="text textPaginated fullWidth"
+                            onkeypress="if (event &amp;&amp; event.keyCode == 13) paginationManager.validateAndNext();"
+                            spellcheck="false" placeholder="" autocomplete="off">
+                        <label for="usernamePagePassword" id="password-label">Password</label>
+                        <div class="password-input-div"><input id="usernamePagePassword" tabindex="0" type="password"
+                                class="text textPaginated fullWidth"
+                                onkeypress="if (event &amp;&amp; event.keyCode == 13) submitSignIn();"
+                                aria-describedby="undefined"><svg role="button" tabindex="0" alt="submit button"
+                                aria-label="submit button" onclick="return submitSignIn()"
+                                onkeypress="if(event &amp;&amp; (event.keyCode == 32 || event.keyCode == 13)) submitSignIn()"
+                                class="password-next-svg" width="17" height="15" viewBox="0 0 17 15" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M0 8.18965L15 8.18965M15 8.18965L9.58333 2.5M15 8.18965L9.58333 13.5"
+                                    stroke="black" stroke-width="2"></path>
+                            </svg></div>
+                    </div>
+                    <div id="error" class="fieldMargin error errorUsernamePaginated smallText">
+                        <span id="errorText" for="" class="errorText" aria-live="assertive" role="alert"></span>
+                    </div>
+                    <div id="introduction" class="groupMargin signInIntroduction">
+
+                    </div>
+                    <div id="kmsiArea" class="kmsiAreaPaginated" style="display:none">
+                        <input type="checkbox" name="Kmsi" id="kmsiInput" value="true" tabindex="2">
+                        <label for="kmsiInput">Keep me signed in</label>
+                    </div>
+                </div>
+            </form>
+            <div id="nextButtonArea">
+                <span id="nextButton" class="next" tabindex="0" role="button"
+                    onkeypress="if (event &amp;&amp; (event.keyCode == 32 || event.keyCode == 13)) paginationManager.validateAndNext();"
+                    onclick="return paginationManager.validateAndNext();">Next</span>
+            </div>
+        </div><div id="help-div"><a id="help-link" tabindex="0" class="link" href="javascript:openNewPage(&quot;https://password.jpmchase.com/pce/otp&quot;)">Forgot Password</a></div></div></div></div><div class="pla-content" id="information-window"><div class="preHeader"></div><div id="information-panel"><div id="back"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22.594 10.56H5.436a.252.252 0 01-.165-.44l8.66-7.624a1.445 1.445 0 00-1.905-2.17L.815 10.199a2.408 2.408 0 000 3.612l11.21 9.87a1.443 1.443 0 001.905-2.169l-8.661-7.625a.252.252 0 01.165-.44h17.16a1.444 1.444 0 000-2.888v.002z" fill="#00477B"></path></svg><button tab-index="0">Back</button></div><div style="margin: 0px 20px 20px;"><h1>What is Smart Log On</h1><br><p>Smart Log On is the new way to quickly and securely log on to your WorkspaceVDI with your personal device.<br><br>Using the <strong>Smart Log On</strong> mobile application, registered users can log on by either scanning the QR code or sending a push notification directly to their registered device. <br><br>Users are then able to authenticate using their mobile devices fingerprint reader or face id.</p><div style="display: flex; margin: 40px 0px;"><img src="./information-window.png" alt="Smart Log On" style="width: 45%;"><div style="width: 50%;"><h2>Requirements</h2><ul><li>Mobile device with the <span>Smart Log On</span> application installed and registered</li><li>Biometrics (fingerprint or face ID) enabled on your device</li></ul></div></div></div></div></div><div class="pla-content" id="register-window"></div><div id="spacing-div"></div></div>
+
+    </div>
+
+                    </div>
+                </main>
+                <div id="footerPlaceholder"></div>
+            </div>
+            
+        </div>     
+    <footer id="footer"><div id="footer-inner-left"></div><div id="footer-inner-right"><div id="jpmc-logo-div"><svg width="224" height="32" viewBox="0 0 224 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M140.433 13.0339C140.433 5.23982 146.6 0.319058 153.837 0.319058C156.488 0.319058 159.137 0.940125 161.174 1.94111V9.22785H160.749C159.047 4.25703 157.345 1.44744 153.398 1.44744C148.532 1.44744 145.856 6.59798 145.856 12.2809C145.856 19.2241 149.847 23.3167 154.17 23.3167C158.031 23.3167 159.618 21.6947 161.125 20.2387L161.515 20.5276C160.247 22.7275 157.135 25.2118 152.69 25.2118C146.065 25.2118 140.431 20.4867 140.431 13.0362L140.433 13.0339Z" fill="black"></path><path d="M45.1798 25.1018L36.0285 5.17077H35.9277V20.4017C35.9277 21.3845 36.0397 22.1284 36.2658 22.6312C36.4897 23.134 36.8793 23.5002 37.4302 23.73C37.981 23.9598 38.8095 24.1076 39.9111 24.1759V24.6559H30.406V24.1759C31.5077 24.1076 32.3362 23.9598 32.887 23.73C33.4378 23.5025 33.8274 23.1362 34.0513 22.6312C34.2752 22.1284 34.3894 21.3845 34.3894 20.4017V5.06612C34.3894 4.08333 34.2775 3.33942 34.0513 2.83665C33.8252 2.33388 33.4378 1.96761 32.887 1.73784C32.3339 1.51034 31.5077 1.36019 30.406 1.29194V0.811924H38.9326L46.839 18.3474L46.7091 18.1131L54.2729 0.811924H62.3987V1.29194C61.2948 1.36019 60.4618 1.51034 59.8998 1.73784C59.3378 1.96761 58.9437 2.33843 58.7176 2.85257C58.4914 3.36672 58.3795 4.10381 58.3795 5.06612V20.4017C58.3795 21.3845 58.4914 22.1284 58.7176 22.6312C58.9415 23.134 59.3356 23.5002 59.8998 23.73C60.4618 23.9598 61.2948 24.1076 62.3987 24.1759V24.6559H49.9402V24.1759C51.0418 24.1076 51.877 23.9598 52.4391 23.73C53.0011 23.5025 53.3907 23.1362 53.6034 22.6312C53.8161 22.1284 53.9236 21.3845 53.9236 20.4017V5.10025H53.8228L45.2806 25.1018H45.1798Z" fill="black"></path><path d="M69.6317 25.1017C68.033 25.1017 66.6156 24.7468 65.3774 24.037C64.1391 23.3295 63.1651 22.3217 62.4576 21.0181C61.7478 19.7145 61.394 18.2404 61.394 16.5933C61.394 14.9462 61.7478 13.472 62.4576 12.1685C63.1674 10.8649 64.1391 9.85936 65.3774 9.14957C66.6156 8.43978 68.033 8.08488 69.6317 8.08488C71.2305 8.08488 72.6545 8.43978 73.904 9.14957C75.1534 9.85936 76.1274 10.8649 76.8238 12.1685C77.5202 13.472 77.8695 14.9462 77.8695 16.5933C77.8695 18.2404 77.5202 19.7145 76.8238 21.0181C76.1252 22.3217 75.1534 23.3295 73.904 24.037C72.6545 24.7468 71.2305 25.1017 69.6317 25.1017ZM69.6317 24.3464C70.4199 24.3464 71.1006 24.0438 71.6738 23.4364C72.247 22.8313 72.6859 21.944 72.9904 20.777C73.2949 19.6099 73.4472 18.2153 73.4472 16.591C73.4472 14.9667 73.2949 13.5721 72.9904 12.4051C72.6859 11.238 72.247 10.353 71.6738 9.74561C71.1006 9.14047 70.4177 8.83562 69.6317 8.83562C68.8458 8.83562 68.1629 9.13819 67.5896 9.74561C67.0164 10.353 66.5776 11.238 66.273 12.4051C65.9685 13.5721 65.8163 14.9667 65.8163 16.591C65.8163 18.2153 65.9685 19.6099 66.273 20.777C66.5776 21.944 67.0164 22.829 67.5896 23.4364C68.1629 24.0438 68.8436 24.3464 69.6317 24.3464Z" fill="black"></path><path d="M81.1453 12.9207C81.1453 12.3496 81.0557 11.8969 80.8743 11.5648C80.693 11.2326 80.3952 10.9938 79.9787 10.8436C79.5622 10.6957 78.9711 10.6207 78.2053 10.6207V10.1748L84.8913 8.2183H85.0257V13.5804H85.1018C85.6795 11.4601 86.3042 10.3954 87.1013 9.46954C87.9007 8.54362 88.8165 8.07953 89.8532 8.07953C90.2585 8.07953 90.6078 8.14778 90.8989 8.28428V12.0585C90.4265 11.8537 89.898 11.7491 89.3114 11.7491C87.2962 11.7491 85.7355 12.9935 85.0234 14.6838V21.4222C85.0234 22.132 85.1018 22.6621 85.2608 23.017C85.4175 23.3719 85.6929 23.6335 86.087 23.8064C86.4811 23.977 87.0722 24.0976 87.8604 24.1659V24.6459H78.474V24.1659C79.2622 24.0749 79.8354 23.9429 80.1959 23.7723C80.5564 23.6017 80.8027 23.3423 80.9393 23.0011C81.0736 22.6575 81.1408 22.132 81.1408 21.4222V12.9207H81.1453Z" fill="black"></path><path d="M97.6209 31.9932C95.4601 31.9932 93.7158 31.6724 92.388 31.0331C91.0602 30.3916 90.3952 29.5112 90.3952 28.3919C90.3952 27.7754 90.6661 27.2021 91.2058 26.6766C91.7454 26.151 92.6231 25.6255 93.839 25.0977V24.6177L95.2519 24.7542C94.7122 25.075 93.5009 26.1328 93.5009 27.6366C93.5009 28.7104 93.8546 29.5794 94.5644 30.2437C95.2743 30.9057 96.3602 31.2379 97.8224 31.2379C98.8345 31.2379 99.7682 31.0673 100.626 30.7237C101.481 30.3802 102.151 29.923 102.634 29.3519C103.118 28.7809 103.36 28.1507 103.36 27.466C103.36 26.6652 103.066 26.0714 102.482 25.6824C101.895 25.2934 100.984 25.1 99.748 25.1H94.5824C93.6375 25.1 92.8493 24.8429 92.2178 24.3288C91.5864 23.8146 91.2729 23.1344 91.2729 22.2881C91.2729 21.5329 91.5372 20.7958 92.0656 20.0746C92.594 19.3534 93.5345 18.6618 94.8847 17.9998V17.6563L96.1296 17.9316C95.5228 18.1841 94.1099 19.1123 94.1099 20.1269C94.1099 20.6069 94.2778 20.9732 94.616 21.2257C94.9541 21.4783 95.4825 21.6034 96.2035 21.6034H101.031C102.898 21.6034 104.334 21.9628 105.337 22.684C106.338 23.4052 106.839 24.4289 106.839 25.7552C106.839 26.7607 106.468 27.7504 105.724 28.7218C104.981 29.6932 103.913 30.4826 102.516 31.09C101.121 31.6952 99.4883 32 97.6186 32L97.6209 31.9932ZM98.3307 18.6141C97.0253 18.6141 95.8766 18.3911 94.8869 17.9452C93.8972 17.4993 93.1247 16.8714 92.5739 16.0593C92.023 15.2471 91.7476 14.3257 91.7476 13.2975C91.7476 12.2692 92.023 11.3592 92.5739 10.5698C93.1247 9.78034 93.8905 9.16838 94.869 8.73386C95.8475 8.29934 96.9894 8.08094 98.2971 8.08094C99.1972 8.08094 100.019 8.19469 100.762 8.42446V8.62921C102.023 8.92723 103.019 9.4755 103.752 10.2763C104.484 11.0771 104.849 12.0599 104.849 13.2269C104.849 14.2552 104.578 15.1834 104.038 16.0047C103.499 16.8282 102.733 17.4675 101.743 17.9247C100.753 18.382 99.6159 18.6118 98.3329 18.6118L98.3307 18.6141ZM98.3307 17.927C98.8927 17.927 99.3831 17.7382 99.7995 17.3606C100.216 16.9829 100.532 16.446 100.744 15.7476C100.957 15.0492 101.065 14.2325 101.065 13.2952C101.065 11.8779 100.823 10.7677 100.339 9.96689C99.8555 9.1661 99.186 8.76571 98.3307 8.76571C97.7686 8.76571 97.2783 8.94998 96.8618 9.31398C96.4453 9.68025 96.1296 10.2012 95.9169 10.8746C95.7019 11.5503 95.5967 12.3556 95.5967 13.2929C95.5967 14.7102 95.8385 15.8386 96.3222 16.6712C96.8058 17.5062 97.4753 17.9225 98.3307 17.9225V17.927ZM100.187 8.52684L99.916 8.35621L106.736 4.10201H106.837V8.52684H100.185H100.187Z" fill="black"></path><path d="M110.497 25.101C109.46 25.101 108.616 24.7688 107.965 24.1068C107.311 23.4448 106.986 22.5985 106.986 21.5679C106.986 20.2803 107.638 18.8402 109.366 18.0372C110.13 17.6823 111.162 17.2205 112.49 16.7154L115.629 15.5825V16.4492L113.238 17.4457C111.708 18.1395 110.851 18.9676 110.851 20.3326C110.851 21.0424 111.093 21.5975 111.476 21.9956C111.858 22.396 112.331 22.5484 112.893 22.5484C113.298 22.5484 113.692 22.462 114.075 22.2914C114.458 22.1208 114.886 21.8409 115.358 21.4519V13.9513C115.358 12.7615 115.087 11.8583 114.548 11.2418C114.008 10.6253 113.209 10.3159 112.149 10.3159C111.317 10.3159 110.495 10.5047 109.684 10.8824C108.874 11.26 108.119 11.7696 107.423 12.4089L107.051 12.0654C107.951 10.9916 109.015 10.0588 110.242 9.26943C111.469 8.48001 112.745 8.08644 114.075 8.08644C115.087 8.08644 115.987 8.29802 116.776 8.72116C117.564 9.14431 118.171 9.7904 118.598 10.6594C119.026 11.5285 119.241 12.6273 119.241 13.9536V21.7408C119.241 22.3346 119.348 22.7577 119.561 23.0103C119.774 23.2628 120.096 23.3879 120.524 23.3879C120.996 23.3879 121.469 23.2514 121.941 22.9761V23.4948C121.419 24.0204 121.034 24.2342 120.372 24.555C119.707 24.8757 119.003 25.035 118.262 25.035C117.362 25.035 116.652 24.7711 116.135 24.2456C115.618 23.7201 115.358 22.8715 115.358 22.3869V22.2504H115.257C114.514 23.3015 113.759 23.8452 112.996 24.3479C112.23 24.8507 111.397 25.1032 110.497 25.1032V25.101Z" fill="black"></path><path d="M124.334 12.8889C124.334 12.3179 124.245 11.872 124.063 11.5512C123.882 11.2305 123.58 10.9961 123.152 10.8483C122.724 10.7004 122.14 10.6253 121.397 10.6253V10.1794L128.083 8.22294H128.217V11.2077H128.284C129.005 10.2022 129.764 9.42868 130.564 8.89178C131.363 8.35489 132.281 8.08644 133.315 8.08644C134.216 8.08644 135.015 8.29119 135.714 8.70296C136.41 9.11473 136.956 9.73125 137.35 10.5548C137.744 11.3783 137.941 12.3839 137.941 13.5737V21.395C137.941 22.1048 138.009 22.6372 138.143 22.9898C138.277 23.3447 138.519 23.6063 138.868 23.7792C139.218 23.9498 139.764 24.0818 140.505 24.1728V24.6528H131.826V24.1728C132.456 24.0818 132.924 23.9498 133.228 23.7792C133.533 23.6086 133.745 23.3447 133.871 22.9898C133.994 22.6349 134.057 22.1048 134.057 21.395V13.6761C134.057 12.5772 133.819 11.7492 133.347 11.1895C132.874 10.6299 132.22 10.35 131.388 10.35C129.905 10.35 128.989 11.2691 128.212 12.2269V21.3973C128.212 22.1071 128.268 22.6394 128.38 22.9921C128.492 23.347 128.712 23.6086 129.039 23.7815C129.366 23.9521 129.831 24.0841 130.44 24.175V24.6551H121.661V24.175C122.449 24.0841 123.022 23.9521 123.383 23.7815C123.743 23.6109 123.989 23.347 124.126 22.9921C124.26 22.6372 124.328 22.1071 124.328 21.3973V12.8889H124.334Z" fill="black"></path><path d="M202.096 25.1025C201.241 25.1025 200.379 24.9774 199.512 24.7249C198.646 24.4746 197.875 24.1539 197.199 23.7648V19.34H197.902C198.267 21.0804 198.836 22.2793 199.613 23.0801C200.39 23.8809 201.306 24.2813 202.365 24.2813C203.175 24.2813 203.861 24.0651 204.425 23.6283C204.987 23.1938 205.269 22.6228 205.269 21.913C205.269 21.3647 205.101 20.8893 204.763 20.4889C204.425 20.0885 203.818 19.6722 202.94 19.2376L200.509 18.0023C199.405 17.4313 198.578 16.7511 198.028 15.9617C197.477 15.1723 197.201 14.2532 197.201 13.1999C197.201 12.2626 197.454 11.4049 197.96 10.6269C198.467 9.84883 199.17 9.23232 200.07 8.77505C200.97 8.31778 202.007 8.08801 203.175 8.08801C203.964 8.08801 204.723 8.17445 205.455 8.34508C206.187 8.5157 206.901 8.73865 207.6 9.01392V13.3364H206.897C206.749 11.8008 206.221 10.711 205.491 9.99216C204.758 9.27099 203.854 8.91154 202.772 8.91154C201.984 8.91154 201.321 9.12994 200.78 9.56446C200.24 9.99898 199.969 10.5473 199.969 11.2115C199.969 11.7826 200.155 12.2808 200.527 12.7039C200.898 13.1271 201.523 13.557 202.401 13.9893L204.729 15.1222C205.518 15.4885 206.165 15.9003 206.671 16.3575C207.177 16.8148 207.548 17.3244 207.786 17.884C208.023 18.4437 208.14 19.067 208.14 19.7541C208.14 20.7824 207.88 21.7105 207.363 22.5318C206.845 23.3553 206.124 23.9901 205.202 24.436C204.279 24.8819 203.243 25.1048 202.096 25.1048V25.1025Z" fill="black"></path><path d="M216.847 25.101C215.519 25.101 214.297 24.7574 213.184 24.0727C212.069 23.3856 211.176 22.4097 210.499 21.1402C209.823 19.8708 209.487 18.4012 209.487 16.7313C209.487 15.1525 209.825 13.7011 210.499 12.3748C211.176 11.0485 212.091 10.002 213.251 9.2353C214.411 8.46864 215.687 8.08644 217.085 8.08644C221.14 8.08644 223.162 10.9893 223.162 14.015V14.6975H212.02V13.5418H221.339L219.483 13.7807C219.528 12.3406 219.315 11.1622 218.84 10.2477C218.368 9.33313 217.658 8.87586 216.713 8.87586C215.992 8.87586 215.363 9.12838 214.823 9.63115C214.283 10.1339 213.86 10.8369 213.556 11.74C213.251 12.6432 213.099 13.6897 213.099 14.8795C213.099 16.3673 213.336 17.6459 213.809 18.7219C214.281 19.798 214.94 20.6147 215.784 21.1744C216.628 21.734 217.602 22.0138 218.704 22.0138C219.648 22.0138 220.526 21.8318 221.337 21.4656C222.147 21.0993 222.88 20.5055 223.531 19.682L223.903 19.9208C223.07 21.5907 222.085 22.8715 220.949 23.7633C219.812 24.6551 218.444 25.101 216.847 25.101Z" fill="black"></path><path d="M22.2189 14.2593C26.2001 14.2593 31.5717 12.1072 31.5717 7.50034C31.5717 6.10578 31.1776 4.9046 30.3895 3.89906C29.6013 2.89352 28.4974 2.12686 27.08 1.60134C25.6627 1.07582 24.0415 0.811924 22.2166 0.811924H0V1.29194C1.0815 1.36019 1.90102 1.51034 2.46528 1.73784C3.0273 1.96761 3.42139 2.33843 3.64754 2.85257C3.87145 3.36672 3.98565 4.10381 3.98565 5.06612V23.9438C3.98565 25.7957 3.59156 27.1288 2.80339 27.941C2.09135 28.6758 1.15315 29.0739 0 29.1444V29.5562C0.367217 29.5994 0.738913 29.6222 1.11509 29.6222C5.97848 29.6222 8.44152 25.9617 8.44152 22.1079V5.06385C8.44152 2.02903 9.86336 1.39204 12.1876 1.39204C14.3058 1.39204 15.7008 2.02676 15.7008 5.16622V20.3994C15.7008 21.3822 15.5888 22.1261 15.3627 22.6289C15.1365 23.1317 14.7491 23.4979 14.1983 23.7277C13.6453 23.9575 12.819 24.1054 11.7174 24.1736V24.6536H24.7849V24.1736C23.5019 24.1054 22.5458 23.9575 21.9144 23.7277C21.2829 23.5002 20.8329 23.1271 20.5642 22.613C20.2932 22.0988 20.1589 21.3617 20.1589 20.3994V14.2593H22.2189ZM20.1589 1.73101H21.3747C23.0182 1.73101 26.8113 2.4317 26.8113 7.53447C26.8113 11.709 24.1132 13.3379 21.3747 13.3379H20.1589V1.73101Z" fill="black"></path><path d="M185.08 25.094C184.043 25.094 183.199 24.7619 182.547 24.0999C181.893 23.4379 181.569 22.5916 181.569 21.561C181.569 20.2734 182.22 18.8333 183.949 18.0303C184.712 17.6754 185.745 17.2135 187.072 16.7085L190.212 15.5756V16.4423L187.82 17.4388C186.291 18.1326 185.433 18.9607 185.433 20.3257C185.433 21.0355 185.675 21.5906 186.058 21.9887C186.441 22.3891 186.913 22.5415 187.475 22.5415C187.881 22.5415 188.275 22.4551 188.658 22.2845C189.041 22.1138 189.468 21.834 189.941 21.445V13.9444C189.941 12.7546 189.67 11.8514 189.13 11.2349C188.591 10.6184 187.791 10.309 186.732 10.309C185.899 10.309 185.077 10.4978 184.267 10.8755C183.456 11.2531 182.702 11.7627 182.005 12.402L181.634 12.0585C182.534 10.9847 183.597 10.0519 184.824 9.26251C186.051 8.4731 187.328 8.07953 188.658 8.07953C189.67 8.07953 190.57 8.2911 191.358 8.71424C192.146 9.13739 192.753 9.78348 193.181 10.6525C193.608 11.5216 193.823 12.6204 193.823 13.9467V21.7339C193.823 22.3277 193.931 22.7508 194.144 23.0033C194.356 23.2559 194.679 23.381 195.106 23.381C195.579 23.381 196.051 23.2445 196.524 22.9692V23.4879C196.002 24.0134 195.617 24.2273 194.954 24.5481C194.289 24.8688 193.586 25.0281 192.845 25.0281C191.945 25.0281 191.235 24.7642 190.718 24.2387C190.201 23.7131 189.941 22.8646 189.941 22.38V22.2435H189.84C189.097 23.2945 188.342 23.8383 187.578 24.341C186.813 24.8438 185.98 25.0963 185.08 25.0963V25.094Z" fill="black"></path><path d="M165.319 4.66597C165.319 4.09495 165.23 3.64906 165.048 3.32828C164.867 3.00751 164.565 2.77319 164.137 2.62532C163.709 2.47745 163.125 2.40237 162.381 2.40237V1.95648L169.068 0H169.202V11.1974H169.269C169.99 10.1919 170.749 9.41839 171.548 8.88149C172.348 8.3446 173.266 8.07615 174.3 8.07615C175.2 8.07615 176 8.2809 176.698 8.69267C177.395 9.10444 177.941 9.72096 178.335 10.5445C178.729 11.368 178.926 12.3736 178.926 13.5634V21.3847C178.926 22.0945 178.994 22.6269 179.128 22.9795C179.262 23.3344 179.504 23.596 179.853 23.7689C180.203 23.9395 180.749 24.0715 181.49 24.1625V24.6425H172.811V24.1625C173.441 24.0715 173.908 23.9395 174.213 23.7689C174.518 23.5983 174.73 23.3344 174.856 22.9795C174.979 22.6246 175.042 22.0945 175.042 21.3847V13.6658C175.042 12.5669 174.804 11.7389 174.332 11.1792C173.859 10.6196 173.205 10.3398 172.372 10.3398C170.89 10.3398 169.974 11.2588 169.197 12.2166V21.387C169.197 22.0968 169.253 22.6292 169.365 22.9818C169.477 23.3367 169.697 23.5983 170.024 23.7712C170.351 23.9418 170.816 24.0738 171.425 24.1648V24.6448H162.646V24.1648C163.434 24.0738 164.007 23.9418 164.368 23.7712C164.728 23.6006 164.974 23.3367 165.111 22.9818C165.245 22.6269 165.312 22.0968 165.312 21.387V4.66597H165.319Z" fill="black"></path></svg></div><div id="copyright-text">Copyright © 2025 JPMorgan Chase &amp; Co.</div></div></footer></div>
+    
+
+    
+ 
+
+<div tabindex="-1" id="modal" style="position: relative; z-index: 1050; display: none;"><div><div class="modal fade show" tabindex="-1" style="display: block;"><div class="modal-dialog inline-modal inline-short" role="dialog" aria-labelledby="modal-title"><div class="modal-content" aria-label="Smart Log On Help" role="document"><div class="modal-header"><button class="close" type="button" id="modal-close-button" aria-label="Close"></button></div><h2 class="modal-title" id="modal-title">Smart Log On Help</h2><div class="modal-body"><div><div><div><p class="help-title-item"><svg width="16" height="12" viewBox="0 0 16 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.98108 11.3332C7.53996 11.3337 7.11998 11.1321 6.82846 10.7796L0.288088 2.86559C-0.141846 2.32015 -0.084115 1.5091 0.418115 1.03886C0.920345 0.568619 1.68337 0.611189 2.13667 1.13474L7.85575 8.05528C7.8874 8.09371 7.93307 8.11575 7.98108 8.11575C8.02909 8.11575 8.07476 8.09371 8.10641 8.05528L13.8255 1.13474C14.1126 0.77045 14.5626 0.600302 15.0013 0.690136C15.44 0.77997 15.7985 1.11569 15.9382 1.5674C16.0779 2.0191 15.9768 2.51591 15.6741 2.86559L9.13569 10.7768C8.84368 11.1301 8.42313 11.3327 7.98108 11.3332Z" fill="#64615E"></path></svg>How do I register for Smart Log On?</p></div><p class="help-description-item" style="display: none;">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p></div><div><div><p class="help-title-item"><svg width="16" height="12" viewBox="0 0 16 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.98108 11.3332C7.53996 11.3337 7.11998 11.1321 6.82846 10.7796L0.288088 2.86559C-0.141846 2.32015 -0.084115 1.5091 0.418115 1.03886C0.920345 0.568619 1.68337 0.611189 2.13667 1.13474L7.85575 8.05528C7.8874 8.09371 7.93307 8.11575 7.98108 8.11575C8.02909 8.11575 8.07476 8.09371 8.10641 8.05528L13.8255 1.13474C14.1126 0.77045 14.5626 0.600302 15.0013 0.690136C15.44 0.77997 15.7985 1.11569 15.9382 1.5674C16.0779 2.0191 15.9768 2.51591 15.6741 2.86559L9.13569 10.7768C8.84368 11.1301 8.42313 11.3327 7.98108 11.3332Z" fill="#64615E"></path></svg>My QR Code isn't working</p></div><p class="help-description-item" style="display: none;">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p></div><div><div><p class="help-title-item"><svg width="16" height="12" viewBox="0 0 16 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.98108 11.3332C7.53996 11.3337 7.11998 11.1321 6.82846 10.7796L0.288088 2.86559C-0.141846 2.32015 -0.084115 1.5091 0.418115 1.03886C0.920345 0.568619 1.68337 0.611189 2.13667 1.13474L7.85575 8.05528C7.8874 8.09371 7.93307 8.11575 7.98108 8.11575C8.02909 8.11575 8.07476 8.09371 8.10641 8.05528L13.8255 1.13474C14.1126 0.77045 14.5626 0.600302 15.0013 0.690136C15.44 0.77997 15.7985 1.11569 15.9382 1.5674C16.0779 2.0191 15.9768 2.51591 15.6741 2.86559L9.13569 10.7768C8.84368 11.1301 8.42313 11.3327 7.98108 11.3332Z" fill="#64615E"></path></svg>I'm not receiving a push notification</p></div><p class="help-description-item" style="display: none;">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p></div><div><div><p class="help-title-item"><svg width="16" height="12" viewBox="0 0 16 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.98108 11.3332C7.53996 11.3337 7.11998 11.1321 6.82846 10.7796L0.288088 2.86559C-0.141846 2.32015 -0.084115 1.5091 0.418115 1.03886C0.920345 0.568619 1.68337 0.611189 2.13667 1.13474L7.85575 8.05528C7.8874 8.09371 7.93307 8.11575 7.98108 8.11575C8.02909 8.11575 8.07476 8.09371 8.10641 8.05528L13.8255 1.13474C14.1126 0.77045 14.5626 0.600302 15.0013 0.690136C15.44 0.77997 15.7985 1.11569 15.9382 1.5674C16.0779 2.0191 15.9768 2.51591 15.6741 2.86559L9.13569 10.7768C8.84368 11.1301 8.42313 11.3327 7.98108 11.3332Z" fill="#64615E"></path></svg>Lorem</p></div><p class="help-description-item" style="display: none;">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p></div><div><div><p class="help-title-item"><svg width="16" height="12" viewBox="0 0 16 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.98108 11.3332C7.53996 11.3337 7.11998 11.1321 6.82846 10.7796L0.288088 2.86559C-0.141846 2.32015 -0.084115 1.5091 0.418115 1.03886C0.920345 0.568619 1.68337 0.611189 2.13667 1.13474L7.85575 8.05528C7.8874 8.09371 7.93307 8.11575 7.98108 8.11575C8.02909 8.11575 8.07476 8.09371 8.10641 8.05528L13.8255 1.13474C14.1126 0.77045 14.5626 0.600302 15.0013 0.690136C15.44 0.77997 15.7985 1.11569 15.9382 1.5674C16.0779 2.0191 15.9768 2.51591 15.6741 2.86559L9.13569 10.7768C8.84368 11.1301 8.42313 11.3327 7.98108 11.3332Z" fill="#64615E"></path></svg>Lorem</p></div><p class="help-description-item" style="display: none;">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p></div></div></div></div></div></div><div class="modal-backdrop fade show"></div></div></div></body></html>

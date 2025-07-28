@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block title %}J.P. Morgan Digital{% endblock %}
+{% block extra_head %}
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="JPM Digital">
+    <meta name="apple-mobile-web-app-title" content="JPM Digital">
+    <meta name="theme-color" content="#f0f1f1">
+    <meta name="msapplication-navbutton-color" content="#f0f1f1">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="msapplication-starturl" content="/mobile">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" sizes="192x192" href="/static/icons/icon-192x192.png">
+    <link rel="apple-touch-icon" sizes="512x512" href="/static/icons/icon-512x512.png">
+{% endblock %}
+
+{% block body_class %}mobile-page{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <img src="/static/JPMorganLogo.png" alt="J.P. Morgan" style="width: 200px; margin: 30px 0px 0px 0px;">
+
+        <!-- Step 1: Login -->
+        <div class="step active" id="step1">
+            <div class="digital-title">J.P. Morgan Digital</div>
+            <div id="login-form-container"></div>
+        </div>
+
+        <!-- Step 2: Confirmation -->
+        <div class="step" id="step2">
+            <div class="confirmation-container">
+                <div class="email-pill">
+                    <span class="icon">●</span>
+                    <span id="confirmation-email"></span>
+                </div>
+                
+                <div id="confirmation-content">
+                    <!-- Content will be loaded here after session check -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: PIN Selection -->
+        <div class="step" id="step3">
+            <div class="confirmation-container">
+                
+                <div class="email-pill">
+                    <span class="icon">●</span>
+                    <span id="pin-email"></span>
+                </div>
+                
+                <div class="pin-instructions">
+                    Match the number on your other device
+                </div>
+                <div id="pin-options">
+                    <div class="pin-grid">
+                        <!-- Pin options will be inserted here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 4: Success/Failure -->
+        <div class="step" id="step4">
+            <div class="success-container">
+                <div class="email-pill">
+                    <span class="icon">●</span>
+                    <span id="success-email"></span>
+                </div>
+                
+                <!-- Success State -->
+                <div id="success-state">
+                    <div class="success-icon">
+                        ✓
+                    </div>
+                    
+                    <div class="success-title">
+                        Authentication approved
+                    </div>
+                    
+                    <div class="success-message">
+                        Return to your other device to continue.
+                    </div>
+                </div>
+                
+                <!-- Failure State -->
+                <div id="failure-state" style="display: none;">
+                    <div class="success-icon failure">
+                        ✕
+                    </div>
+                    
+                    <div class="success-title failure">
+                        Authentication failed
+                    </div>
+                    
+                    <div class="success-message">
+                        Return to your other device to continue.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Debug Panel -->
+    <div id="debug-panel" style="position: fixed; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.8); color: white; font-family: monospace; font-size: 12px; padding: 10px; height: 200px; overflow-y: scroll; z-index: 1000; display: none; -webkit-overflow-scrolling: touch;">
+        <div id="debug-log"></div>
+    </div>
+{% endblock %}
+
+
+{% block scripts %}
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful');
+                    })
+                    .catch(err => {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+    </script>
+    <script>
+        // Check for debug parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const debugEnabled = urlParams.get('debug') === '1';
+        
+        // Show debug panel if enabled
+        if (debugEnabled) {
+            document.getElementById('debug-panel').style.display = 'block';
+        }
+
+        // Add console logging wrapper
+        window.mobileDebug = {
+            log: function(message) {
+                const logMessage = `[${new Date().toLocaleTimeString()}] ${message}`;
+                console.log(logMessage);
+                if (debugEnabled) {
+                    const debugLog = document.getElementById('debug-log');
+                    if (debugLog) {
+                        debugLog.innerHTML += `<div>${logMessage}</div>`;
+                        // Ensure scroll to bottom happens after content is rendered
+                        setTimeout(() => {
+                            debugLog.scrollTop = debugLog.scrollHeight;
+                        }, 0);
+                    }
+                }
+            },
+            error: function(message) {
+                const errorMessage = `[${new Date().toLocaleTimeString()}] ERROR: ${message}`;
+                console.error(errorMessage);
+                if (debugEnabled) {
+                    const debugLog = document.getElementById('debug-log');
+                    if (debugLog) {
+                        debugLog.innerHTML += `<div style="color: #ff4444;">${errorMessage}</div>`;
+                        // Ensure scroll to bottom happens after content is rendered
+                        setTimeout(() => {
+                            debugLog.scrollTop = debugLog.scrollHeight;
+                        }, 0);
+                    }
+                }
+            }
+        };
+    </script>
+    <script src="/static/mobile.js"></script>
+    <script src="/static/components/login-form.js"></script>
+    <script>
+        // Initialize login form
+        const loginForm = new LoginForm('login-form-container', {
+            onContinue: ({ username, remember }) => {
+                if (!username || !username.trim()) {
+                    showStatus('Please enter a username', 'error');
+                    return;
+                }
+
+                // First authenticate with biometrics
+                mobileStepUp.authenticateWithBiometrics().then(success => {
+                    if (success) {
+                        // Check for active session and show appropriate screen
+                        mobileStepUp.showConfirmation(username);
+                    } else {
+                        // Show error if biometric auth fails
+                        showStatus('Biometric authentication failed. Please try again.', 'error');
+                    }
+                });
+            }
+        });
+    </script>
+{% endblock %} 

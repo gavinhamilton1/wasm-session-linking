@@ -1,0 +1,15 @@
+pyOpenSSL>=23.0.0  # Add pyOpenSSL for SSL support
+cryptography>=41.0.0
+numpy>=1.24.0
+uvicorn>=0.22.0  # Add uvicorn for ASGI server
+fastapi>=0.95.0  # Add fastapi for ASGI framework
+pandas>=1.5.0
+sse_starlette>=0.10.3  # Add sse_starlette for server-sent events
+pywebpush>=1.14.0  # Add pywebpush for web push notifications
+python-multipart>=0.0.5  # Add python-multipart for form data handling
+jinja2>=3.1.2
+websockets>=10.4
+pyjwt>=2.0.0
+ecdsa>=0.19.0
+fastecdsa>=2.3.1
+secure>=0.3.0

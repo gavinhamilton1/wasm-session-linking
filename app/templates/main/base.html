@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/styles.css" />
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+    <div id="content">
+        {% block content %}{% endblock %}
+    </div>
+
+    {% if show_footer %}
+    <footer class="site-footer">
+        <div class="footer-text">
+            © 2025 J.P. Morgan Chase & Co. This site is for J.P. Morgan clients only. 
+            Individuals attempting unauthorized access will be prosecuted.
+        </div>
+    </footer>
+    {% endif %}
+
+    {% block scripts %}{% endblock %}
+</body>
+</html> 

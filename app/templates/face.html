@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Verification</title>
+    <script src="js/face-api.min.js" defer></script>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #222;
+            color: white;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        .result-container {
+            width: 100%;
+            max-width: 800px;
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            text-align: center;
+        }
+        .face-image {
+            max-width: 200px;
+            margin: 10px auto;
+            border-radius: 5px;
+            border: 2px solid #fff;
+        }
+        .error-message {
+            color: #ff6b6b;
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(255, 0, 0, 0.1);
+            border-radius: 4px;
+        }
+        .success-message {
+            color: #4CAF50;
+            margin: 10px 0;
+        }
+        .container {
+            position: relative;
+            width: 720px;
+            height: 560px;
+            margin-top: 20px;
+        }
+        .reference-container {
+            margin: 20px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            width: 80%;
+            max-width: 600px;
+        }
+        .reference-image {
+            max-width: 200px;
+            max-height: 200px;
+            border: 2px solid #fff;
+            border-radius: 8px;
+        }
+        video {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 2px solid #fff;
+            border-radius: 8px;
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        .error {
+            color: #ff6b6b;
+        }
+        .match-info {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        .match {
+            color: #4CAF50;
+        }
+        .no-match {
+            color: #ff6b6b;
+        }
+        .upload-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+            text-decoration: none;
+            margin-top: 10px;
+        }
+        .upload-btn:hover {
+            background-color: #45a049;
+        }
+        .upload-btn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .id-info {
+            margin: 10px 0;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            text-align: center;
+        }
+        .id-info p {
+            margin: 5px 0;
+            font-size: 16px;
+        }
+        .id-info strong {
+            color: #4CAF50;
+        }
+    </style>
+</head>
+<body>
+    {% if success %}
+    <div class="result-container">
+        <div class="success-message">ID Processing Results</div>
+        
+        {% if license_number %}
+        <p><strong>License Number:</strong> {{ license_number }}</p>
+        {% endif %}
+        
+        {% if name %}
+        <p><strong>Name:</strong> {{ name }}</p>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="result-container">
+        <div class="error-message">
+            {{ error or 'An error occurred during processing.' }}
+        </div>
+    </div>
+    {% endif %}
+
+    <h1>Face Verification</h1>
+    <div class="status" id="status">Loading models...</div>
+    
+    <div class="reference-container">
+        <h3>Reference Face</h3>
+        <img id="referenceImage" class="face-image" src="data:image/jpeg;base64,{{ face_image }}" alt="ID card face">
+        <div id="matchInfo" class="match-info">Reference face loaded from ID card</div>
+    </div>
+
+    <div class="container">
+        <video id="video" autoplay muted playsinline></video>
+        <canvas id="overlay"></canvas>
+    </div>
+    
+    <div class="controls">
+        <button id="startButton" disabled>Start Camera</button>
+        <button id="stopButton" disabled>Stop Camera</button>
+        <a href="/upload" class="upload-btn">Upload Different ID</a>
+    </div>
+
+    <script>
+        let isModelLoaded = false;
+        let isProcessing = false;
+        let referenceDescriptor = null;
+        const video = document.getElementById('video');
+        const overlay = document.getElementById('overlay');
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const statusDiv = document.getElementById('status');
+        const referenceImage = document.getElementById('referenceImage');
+        const matchInfo = document.getElementById('matchInfo');
+
+        // Initialize face detection and process reference image
+        async function initFaceDetection() {
+            try {
+                statusDiv.textContent = 'Loading face detection models...';
+                
+                // Load all required models
+                await Promise.all([
+                    faceapi.nets.tinyFaceDetector.loadFromUri('/weights'),
+                    faceapi.nets.faceLandmark68Net.loadFromUri('/weights'),
+                    faceapi.nets.faceExpressionNet.loadFromUri('/weights'),
+                    faceapi.nets.faceRecognitionNet.loadFromUri('/weights')
+                ]);
+
+                isModelLoaded = true;
+                statusDiv.textContent = 'Models loaded successfully! Processing ID card face...';
+
+                // Process reference image once models are loaded
+                await processReferenceImage();
+
+            } catch (error) {
+                console.error('Error loading models:', error);
+                statusDiv.innerHTML = `Error loading models: ${error.message}<br>Please refresh the page to try again.`;
+                statusDiv.classList.add('error');
+            }
+        }
+
+        // Process the reference image from ID card
+        async function processReferenceImage() {
+            try {
+                // Detect face in reference image
+                const detection = await faceapi.detectSingleFace(referenceImage, new faceapi.TinyFaceDetectorOptions())
+                    .withFaceLandmarks()
+                    .withFaceDescriptor();
+
+                if (detection) {
+                    referenceDescriptor = detection.descriptor;
+                    matchInfo.textContent = 'ID card face registered. Start camera to begin verification.';
+                    matchInfo.className = 'match-info';
+                    startButton.disabled = false;
+                } else {
+                    throw new Error('No face detected in ID card image');
+                }
+            } catch (error) {
+                console.error('Error processing ID card face:', error);
+                matchInfo.textContent = 'Error: ' + error.message;
+                matchInfo.className = 'match-info error';
+                startButton.disabled = true;
+            }
+        }
+
+        // Start webcam
+        async function startVideo() {
+            try {
+                const constraints = {
+                    video: {
+                        width: 720,
+                        height: 560,
+                        facingMode: 'user'
+                    }
+                };
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = stream;
+                
+                await new Promise((resolve) => {
+                    video.onloadedmetadata = () => resolve();
+                });
+
+                overlay.width = video.videoWidth;
+                overlay.height = video.videoHeight;
+
+                startButton.disabled = true;
+                stopButton.disabled = false;
+                statusDiv.textContent = 'Camera started. Face verification active.';
+                startFaceDetection();
+            } catch (error) {
+                console.error('Error accessing webcam:', error);
+                statusDiv.textContent = `Error accessing webcam: ${error.message}`;
+                statusDiv.classList.add('error');
+            }
+        }
+
+        // Stop webcam
+        function stopVideo() {
+            const stream = video.srcObject;
+            const tracks = stream.getTracks();
+            tracks.forEach(track => track.stop());
+            video.srcObject = null;
+            startButton.disabled = false;
+            stopButton.disabled = true;
+            statusDiv.textContent = 'Camera stopped. Click "Start Camera" to begin again.';
+            const context = overlay.getContext('2d');
+            context.clearRect(0, 0, overlay.width, overlay.height);
+        }
+
+        // Process face detection and verification
+        async function startFaceDetection() {
+            if (!isModelLoaded || isProcessing || !referenceDescriptor) return;
+
+            async function detect() {
+                if (!video.srcObject) return;
+
+                isProcessing = true;
+                try {
+                    const detections = await faceapi.detectAllFaces(
+                        video, 
+                        new faceapi.TinyFaceDetectorOptions({
+                            inputSize: 512,
+                            scoreThreshold: 0.5
+                        })
+                    )
+                    .withFaceLandmarks()
+                    .withFaceDescriptors();
+
+                    const context = overlay.getContext('2d');
+                    context.clearRect(0, 0, overlay.width, overlay.height);
+
+                    const dims = {
+                        width: video.videoWidth,
+                        height: video.videoHeight
+                    };
+                    const resizedDetections = faceapi.resizeResults(detections, dims);
+
+                    // Draw boxes and check for matches
+                    resizedDetections.forEach(detection => {
+                        const distance = faceapi.euclideanDistance(referenceDescriptor, detection.descriptor);
+                        const isMatch = distance < 0.5; // Stricter threshold for ID verification
+                        
+                        const drawBox = new faceapi.draw.DrawBox(detection.detection.box, {
+                            boxColor: isMatch ? '#4CAF50' : '#ff6b6b',
+                            lineWidth: 2
+                        });
+                        drawBox.draw(overlay);
+
+                        const box = detection.detection.box;
+                        context.font = 'bold 16px Arial';
+                        context.strokeStyle = 'black';
+                        context.lineWidth = 3;
+                        
+                        const text = isMatch ? 
+                            `✓ Verified (${Math.round((1 - distance) * 100)}%)` : 
+                            `✗ Not Verified (${Math.round((1 - distance) * 100)}%)`;
+                        
+                        context.strokeText(text, box.x, box.y - 10);
+                        context.fillStyle = isMatch ? '#4CAF50' : '#ff6b6b';
+                        context.fillText(text, box.x, box.y - 10);
+
+                        // Update match info
+                        matchInfo.textContent = isMatch ? 
+                            `Face verified with ${Math.round((1 - distance) * 100)}% confidence` : 
+                            `Face verification failed. Please try again.`;
+                        matchInfo.className = `match-info ${isMatch ? 'match' : 'no-match'}`;
+                    });
+
+                } catch (error) {
+                    console.error('Detection error:', error);
+                } finally {
+                    isProcessing = false;
+                    if (video.srcObject) {
+                        requestAnimationFrame(detect);
+                    }
+                }
+            }
+
+            detect();
+        }
+
+        // Event listeners
+        startButton.addEventListener('click', startVideo);
+        stopButton.addEventListener('click', stopVideo);
+
+        // Initialize when page loads
+        window.onload = async function() {
+            if (typeof faceapi === "undefined") {
+                statusDiv.textContent = "Error: face-api.js not loaded";
+                statusDiv.classList.add('error');
+                return;
+            }
+            await initFaceDetection();
+        };
+    </script>
+</body>
+</html>

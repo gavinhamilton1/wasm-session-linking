@@ -1,0 +1,103 @@
+<html>
+    <pre>
+
+        import time
+import io
+import datetime
+import requests
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from PIL import Image
+
+# URL of the page with the QR code
+url = "https://workspace.jpmchase.com"
+
+# Set up Selenium WebDriver
+chrome_options = Options()
+#chrome_options.add_argument("--headless")  # Run without UI
+chrome_options.add_argument("--disable-gpu")
+chrome_options.add_argument("--window-size=1280,1000")
+chrome_options.add_argument("--window-position=2200,40")
+
+
+driver_path = "./chromedriver"
+service = Service(driver_path)
+driver = webdriver.Chrome(service=service, options=chrome_options)
+
+upload_url = "https://jpmworkspace.com/qrupload" 
+
+def capture_qr_code():
+    # Load the webpage
+    driver.get(url)
+    time.sleep(10)  # Wait for page to fully load
+
+    # Locate the QR code element dynamically
+    qr_element = driver.find_element(By.ID, "qrcode")  # Replace with actual ID/class
+
+    #Extract boundding box details
+    bounding_box = driver.execute_script("""
+        var rect = arguments[0].getBoundingClientRect();
+        return {
+            'x': rect.left + window.scrollX,
+            'y': rect.top + window.scrollY,
+            'width': rect.width,
+            'height': rect.height,
+            'devicePixelRatio': window.devicePixelRatio
+        };
+    """, qr_element)
+
+    # Extract coordinates and size
+    left = bounding_box['x']
+    top = bounding_box['y']
+    width = bounding_box['width']
+    height = bounding_box['height']
+    dpr = bounding_box['devicePixelRatio']  # Correct for display scaling
+
+    # Adjust for DPR (important for high-DPI displays)
+    left, top, width, height = int(left * dpr), int(top * dpr), int(width * dpr), int(height * dpr)
+
+    # Take a full-page screenshot
+    screenshot = driver.get_screenshot_as_png()
+    image = Image.open(io.BytesIO(screenshot))
+
+    # Crop the QR code from the full screenshot
+    cropped_image = image.crop((left, top, left + width, top + height))
+
+    # name the file
+    filename = "qrcode.png"
+
+    # Save the cropped QR code image
+    cropped_image.save(filename)
+    print(f"QR code screenshot saved as {filename}")
+
+    # Upload to API
+    try:
+        with open(filename, "rb") as file:
+            response = requests.post(upload_url, files={"file": file})
+            if response.status_code == 200:
+                print(f"Successfully uploaded {filename}")
+            else:
+                print(f"Upload failed with status code {response.status_code}: {response.text}")
+    except Exception as e:
+        print(f"Error uploading image: {e}")
+
+
+# Run the refresh + capture loop every 3 minutes
+try:
+    while True:
+        capture_qr_code()
+        print("Wait 3 mins and refresh page for new QR Code...")
+        time.sleep(180)  # Wait 3 minutes (180 seconds)
+except KeyboardInterrupt:
+    print("Stopping script.")
+    driver.quit()
+
+
+
+
+
+
+    </pre>
+</html>

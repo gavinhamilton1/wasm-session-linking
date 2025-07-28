@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stronghold Step-up Demo</title>
+    <script src="https://unpkg.com/qrcode@1.4.4/build/qrcode.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #step-up-container {
+            min-height: 300px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 4px;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Stronghold Step-up Demo</h1>
+        <div style="color: #666; margin-bottom: 10px;">Version 0.4.0</div>
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+            <div id="auth-level" style="color: #28a745; font-weight: bold;">Auth Level: AAL2</div>
+            <button id="downgrade-button" 
+                    onclick="stronghold.downgradeAAL()" 
+                    style="display: none; padding: 5px 10px; font-size: 12px; background-color: #dc3545;">
+                Downgrade to AAL2
+            </button>
+        </div>
+        <div class="controls">
+            <button onclick="startStepUp()">Start Step-up</button>
+            <button onclick="completeStepUp()">Complete Step-up</button>
+        </div>
+        <div id="step-up-container"></div>
+        <div id="status"></div>
+    </div>
+
+    <script>
+        const statusDiv = document.getElementById('status');
+        
+        function showStatus(message, type) {
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+        }
+    </script>
+
+    <script src="/v1/static/stronghold.js"></script>
+
+    <script>
+        let currentClientId = null;
+        const stronghold = new Stronghold();
+
+        async function startStepUp() {
+            console.log('Starting step-up process');
+            try {
+                // Initialize SSE connection and get client ID
+                console.log('Initializing SSE connection');
+                currentClientId = await stronghold.initializeStepUp('step-up-container', '/register-sse');
+                console.log('Received client ID:', currentClientId);
+                
+                // Initiate step-up
+                console.log('Initiating step-up with client ID:', currentClientId);
+                const result = await fetch(`/initiate-step-up/${currentClientId}`, {
+                    method: 'POST'
+                });
+                const data = await result.json();
+                console.log('Step-up initiated response:', data);
+                
+                showStatus('Step-up initiated successfully', 'success');
+            } catch (error) {
+                console.error('Step-up error:', error);
+                showStatus('Error starting step-up: ' + error.message, 'error');
+            }
+        }
+
+        async function completeStepUp() {
+            if (!currentClientId) {
+                showStatus('No active step-up session', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/complete-step-up/${currentClientId}`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                showStatus('Step-up completed successfully', 'success');
+            } catch (error) {
+                showStatus('Error completing step-up: ' + error.message, 'error');
+            }
+        }
+    </script>
+</body>
+</html> 

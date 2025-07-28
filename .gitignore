@@ -1,0 +1,11 @@
+*.pyc
+__pycache__/
+.env
+venv/
+*mmocr*
+ai/trainingdata/
+ai/runs/
+node_modules/
+design_assets/
+target
+scratch.txt

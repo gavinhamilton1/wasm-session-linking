@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: stronghold-web
+    env: python
+    buildCommand: |
+      # Install system dependencies first
+      apt-get update
+      apt-get install -y python3-dev libssl-dev libffi-dev python3-openssl build-essential
+      # Then install Python packages
+      pip install --upgrade pip
+      pip install pyOpenSSL cryptography
+      pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT

@@ -1,0 +1,40 @@
+# Stronghold Step-up Authentication
+
+A Python FastAPI application for step-up authentication.
+
+## Setup
+
+1. Create and activate a virtual environment:
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+## Running the Application
+
+Start the server:
+```bash
+uvicorn app:app --reload
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --log-level debug
+
+```
+
+## Usage
+
+Open in browser:
+- Local: http://localhost:8000
+- Mobile: http://localhost:8000/mobile
+- WebAuthn: http://localhost:8000/webauthn
+
+
+<iframe 
+    src="https://stronghold-test.onrender.com/?username=gavin" 
+    style="width: 400px; height: 600px; border: none;">
+</iframe>
+
+wasm-pack build --target web --features debug_logs

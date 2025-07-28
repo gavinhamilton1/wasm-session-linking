@@ -1,0 +1,343 @@
+{% extends "base.html" %}
+
+{% block title %}J.P. Morgan Digital Banking{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="hero-background"></div>
+    <div class="hero-container">
+        <div class="hero-logo">
+            <div class="white-bar"></div>
+            <img src="/static/JPMorganLogoWhite.png" alt="J.P. Morgan" class="logo-white">
+        </div>
+        <div class="hero-wrapper">
+            <div class="login-section">
+                <div class="login-container">
+                    <div class="login-title">Log in - gh index</div>
+                    <div class="input-label">Username</div>
+                    <input type="text" 
+                           id="username-input" 
+                           class="username-input">
+                    <div class="remember-me">
+                        <input type="checkbox" 
+                               id="remember-username"
+                               onchange="handleRememberMe(this)">
+                        <label for="remember-username">Remember username</label>
+                    </div>
+                    <button class="continue-button" onclick="handleContinue()">CONTINUE</button>
+                    <div class="help-link">
+                        <a href="#">NEED HELP LOGGING IN?</a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="hero-content">
+                <h1>J.P. Morgan Digital Banking<sup>®</sup></h1>
+                <p class="hero-subtitle">Banking for the smallest of startups to global multinationals.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="content-cards">
+    <div class="card">
+        <img src="/static/images/startup-insights.png" alt="Startup insights">
+        <div class="card-content">
+            <h2>Startup insights report</h2>
+            <p>Our Startup Insights Report highlights traits of successful founders, emerging sector trends and regional insights for AI, venture funding and robotics.</p>
+            <a href="#" class="learn-more">Learn more ›</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <img src="/static/images/cash-runway.png" alt="Cash runway">
+        <div class="card-content">
+            <h2>Creating a cash runway for your startup</h2>
+            <p>Strong cash management is essential for any business. For startups, achieving an adequate cash runway is critical to survival.</p>
+            <a href="#" class="learn-more">Learn more ›</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <img src="/static/images/409a-valuations.png" alt="409A valuations">
+        <div class="card-content">
+            <h2>409A valuations: What every founder needs to know</h2>
+            <p>Learn more about the 409A valuation process, why the valuations are needed and how to avoid penalties for non-compliance.</p>
+            <a href="#" class="learn-more">Learn more ›</a>
+        </div>
+    </div>
+</div>
+
+<footer class="site-footer">
+    <div class="footer-links">
+        <a href="#">Accessibility</a>
+        <a href="#">Security</a>
+        <a href="#">Privacy</a>
+        <a href="#">Terms</a>
+        <a href="#">Cookie policy</a>
+        <a href="#">Regulatory information</a>
+    </div>
+    <div class="footer-text">
+        © 2025 JPMorgan Chase & Co. All rights reserved. JPMorgan Chase Bank, N.A. Member FDIC. Deposits held in non-U.S. branches are not FDIC insured. JPMorgan Chase Bank, N.A., organized under the laws of U.S.A. with limited liability.
+    </div>
+</footer>
+
+{% endblock %}
+
+{% block scripts %}
+    <script src="/static/stronghold.js"></script>
+    <script src="/static/components/login-form.js"></script>
+    <script>
+        // Define functions first
+        function showStep(stepNumber) {
+            // Hide all steps
+            document.querySelectorAll('.step').forEach(step => step.classList.remove('active'));
+            // Show requested step
+            document.getElementById(`step${stepNumber}`).classList.add('active');
+        }
+
+        async function proceedToCode(username) {
+            try {
+                // Reset any existing session
+                if (currentSessionId) {
+                    // Reset Stronghold instance
+                    if (stronghold) {
+                        if (stronghold.ws) {
+                            stronghold.ws.close();
+                            stronghold.ws = null;
+                        }
+                        if (stronghold.pollingInterval) {
+                            clearInterval(stronghold.pollingInterval);
+                            stronghold.pollingInterval = null;
+                        }
+                        stronghold.sessionId = null;
+                    }
+                    currentSessionId = null;
+                }
+                
+                const requestData = { username };
+                console.log('Browser: Sending start-session request to server');
+                console.log('Browser: API Call - POST /start-session', requestData);
+                const response = await fetch('/start-session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestData)
+                });
+                
+                if (!response.ok) {
+                    console.error(`Browser: Server returned status: ${response.status}`);
+                    throw new Error('Failed to start session');
+                }
+                
+                const data = await response.json();
+                console.log('Browser: API Response:', data);
+                currentSessionId = data.session_id;
+                console.log(`Browser: Session started with ID: ${currentSessionId}`);
+                
+                // Show the PIN step
+                showStep(2);
+                
+                // Update the confirmation container to show the new PIN
+                const confirmationContainer = document.querySelector('.confirmation-container');
+                if (confirmationContainer) {
+                    confirmationContainer.innerHTML = `
+                <h3>One-Time Code</h3>
+                <p>Please open the J.P. Morgan Digital Mobile App and select the following code:</p>
+                        <div class="pin-container">
+                            <div id="browser-pin">
+                                ${data.pin}
+                            </div>
+                            <div id="pin-status"></div>
+                        </div>
+                    `;
+                    console.log(`Browser: Displaying PIN: ${data.pin}`);
+                }
+                
+                // Initialize WebSocket connection
+                await stronghold.initializeSession(data.session_id);
+            } catch (error) {
+                console.error('Browser: Session error:', error);
+                showStatus('Error starting session: ' + error.message, 'error');
+            }
+        }
+
+        const statusDiv = document.getElementById('status');
+        
+        function showStatus(message, type) {
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+        }
+
+        // Initialize Stronghold instance
+        const stronghold = new Stronghold();
+        let currentSessionId = null;
+        let currentClientId = null;
+
+        // Check for username in URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const autoUsername = urlParams.get('username');
+        
+        // If username provided, auto-start the session
+        if (autoUsername) {
+            // Hide login form, show PIN step immediately
+            showStep(2);
+            // Start session with provided username
+            proceedToCode(autoUsername);
+        }
+
+        // Only initialize login form if no username provided and we're not in auto mode
+        if (!autoUsername) {
+            const loginForm = new LoginForm('login-form-container', {
+                onContinue: ({ username, remember }) => {
+                    proceedToCode(username);
+                }
+            });
+
+            // Only check for saved username if we're showing the login form
+            document.addEventListener('DOMContentLoaded', function() {
+                const usernameInput = document.getElementById('username-input');
+                const rememberCheckbox = document.getElementById('remember-username');
+                
+                // Check for saved state
+                const savedUsername = getCookie('username');
+                const shouldRemember = getCookie('remember_username') === 'true';
+                
+                // Restore saved state
+                if (shouldRemember && savedUsername) {
+                    usernameInput.value = savedUsername;
+                    rememberCheckbox.checked = true;
+                }
+            });
+        }
+    </script>
+
+    <script>
+        // Define functions first
+        function handleRememberMe(checkbox) {
+            const username = document.getElementById('username-input').value;
+            if (checkbox.checked) {
+                setCookie('remember_username', 'true', 30);
+                setCookie('username', username, 30);
+            } else {
+                setCookie('remember_username', 'false', -1);
+                setCookie('username', '', -1);
+            }
+        }
+
+        // Cookie handling functions
+        function setCookie(name, value, days) {
+            const expires = new Date();
+            expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+            document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`;
+        }
+
+        function getCookie(name) {
+            const nameEQ = name + "=";
+            const ca = document.cookie.split(';');
+            for(let i = 0; i < ca.length; i++) {
+                let c = ca[i];
+                while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+                if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+            }
+            return null;
+        }
+
+        // Initialize everything after DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            const usernameInput = document.getElementById('username-input');
+            const rememberCheckbox = document.getElementById('remember-username');
+
+            if (usernameInput && rememberCheckbox) {
+                // Restore saved state
+                const savedUsername = getCookie('username');
+                const shouldRemember = getCookie('remember_username') === 'true';
+
+                if (shouldRemember && savedUsername) {
+                    usernameInput.value = savedUsername;
+                    rememberCheckbox.checked = true;
+                }
+
+                // Add input handler
+                usernameInput.addEventListener('input', function(e) {
+                    if (rememberCheckbox.checked) {
+                        setCookie('username', e.target.value, 30);
+                    }
+                });
+            }
+        });
+    </script>
+
+    <script>
+        // Handle pin selection
+        function handlePinSelector() {
+            const pinDisplay = document.getElementById('browser-pin');
+            const messageBox = document.getElementById('pin-message-box');
+            
+            // Hide the PIN
+            pinDisplay.style.display = 'none';
+            
+            // Show the message box
+            messageBox.style.display = 'block';
+        }
+        
+        // Handle message submission
+        function handleMessageSubmit() {
+            const message = document.getElementById('pin-message').value;
+            if (message.trim()) {
+                console.log('Message submitted:', message);
+                // Add your message handling logic here
+                
+                // Clear the message input
+                document.getElementById('pin-message').value = '';
+            }
+        }
+    </script>
+
+    <script>
+        function resetAndShowLogin() {
+            // Reset the PIN display
+            const pinContainer = document.getElementById('browser-pin');
+            if (pinContainer) {
+                pinContainer.innerHTML = 'Generating code...';
+            }
+            
+            // Reset Stronghold instance
+            if (stronghold) {
+                // Close existing WebSocket
+                if (stronghold.ws) {
+                    stronghold.ws.close();
+                    stronghold.ws = null;
+                }
+                // Clear polling interval
+                if (stronghold.pollingInterval) {
+                    clearInterval(stronghold.pollingInterval);
+                    stronghold.pollingInterval = null;
+                }
+                // Reset session ID
+                stronghold.sessionId = null;
+            }
+            
+            // Create new Stronghold instance
+            window.stronghold = new Stronghold();
+            
+            // Show login step
+            showStep(1);
+        }
+    </script>
+
+    <script>
+        function handleContinue() {
+            const username = document.getElementById('username-input').value.trim();
+            if (username) {
+                // Set username cookie
+                document.cookie = `username=${username}; path=/`;
+                window.location.href = '/dashboard';
+            }
+        }
+    </script>
+{% endblock %} 

@@ -1,0 +1,76 @@
+[package]
+name = "wasm_domain_verification"
+version = "0.1.0"
+edition = "2021"
+description = "A WebAssembly module for domain verification and QR code generation."
+repository = "https://github.com/gavinhamilton1/stronghold"
+license = "MIT"
+build = "build.rs"
+
+[features]
+default = []
+debug_logs = []
+
+[package.security.wasm]
+allowed_domains = ["localhost:8000", "stronghold-test.onrender.com", "devide.io"]
+
+[package.metadata.wasm]
+local_domain_check = true
+server_verification = true
+same_network_check = true
+static_qr_code = false
+dynamic_qr_code = true
+pinned_secret = true
+e2e_encryption = true
+digital_signature_verification = true
+digital_receipts = false
+physical_signature = true
+browser_identity_key = true
+login_confirmation = false
+login_verification = true
+third_party_confirm=true
+user_agent_fingerprint=true
+utc_timecode_check=true
+
+[lib]
+crate-type = ["cdylib"]
+path = "dv.rs"
+
+[build-dependencies]
+rand = "0.8"
+sha2 = "0.10"
+hex = "0.4.3"
+toml = "0.7"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[dependencies]
+wasm-bindgen = { version = "0.2", features = ["serde"] }
+serde-wasm-bindgen = "0.6"
+wasm-bindgen-futures = "0.4"
+web-sys = { version = "0.3", features = ["Window", "Location", "Document", "HtmlCanvasElement", "CanvasRenderingContext2d", "console", "Request", "RequestInit", "RequestMode", "Response", "TextMetrics", "MouseEvent", "Headers"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+qrcode = "0.14.1"
+base64 = "0.22.1"
+js-sys = "0.3"
+p256 = { version = "0.13.1", features = ["ecdsa", "ecdh"] }
+getrandom = { version = "0.2", features = ["js"] }
+hex = "0.4.3"
+hmac = "0.12"
+sha2 = "0.10"
+rand_core = "0.6"
+aes-gcm = { version = "0.10", features = ["rand_core"] }
+ring = "0.16" 
+rand = "0.8" 
+lazy_static = "1.4"
+uuid = { version = "1.0", features = ["v4", "wasm-bindgen"] } 
+urlencoding = "2.1.0" 
+
+
+
+#to compile: wasm-pack build --target web
+#for prod: wasm-pack build --target web --release
+#mutate: wasm-tools mutate pkg/wasm_domain_verification_bg.wasm -o obfuscated.wasm
+#optimize and obfustate: wasm-opt -Oz -o obfuscated.wasm pkg/wasm_domain_verification_bg.wasm
+

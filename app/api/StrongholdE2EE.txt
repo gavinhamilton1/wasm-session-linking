@@ -1,0 +1,44 @@
+
+Assumptions:
+AES-GCM with the derived SEKs is used to generate encryptors/decryptors
+
+Pre-requisites: 
+There is a Stronghold Gateway (SGW) public key baked into the Stronghold SDK (SSDK)
+Oauth2.0 PKCE flow with DPOP is complete and SSDK is in possession of access token
+
+E2EE set-up flow:
+SSDK -> initializes with SGW public key baked into framework
+SSDK -> generates ECDH private key (with public part)
+SSDK -> derives HKDF SSDK-SGW SEK from ECDH private key and gateway public key, and session salt
+SSDK -> encrypts access token with SEK
+SSDK -> sends encrypted E2EE set-up request with encrypted access token and SSDK ECDH public key to SGW
+
+SGW -> derives HKDF SEK from its private key and SSDK ECDH public key, and session salt
+SGW -> decrypts E2EE set-up message and access token with derived SEK
+SGW -> verifies access token
+SGW -> sends E2EE request to API endpoint (API) with SSDK ECDH public key and decrypted access token
+
+API -> generates ECDH private key (with public part)
+API -> derives HKDF SEK from API ECDH private key and SSDK ECDH public key, and session salt
+API -> signs API ECDH public key with the API's private verification key
+API -> encrypts { API ECDH public key, signature } with SSDK-API SEK
+API -> sends encrypted API public key package to SGW
+
+SGW -> forwards encrypted API public key package to SSDK
+
+SSDK -> decrypts API public key package with SSDK-API SEK
+SSDK -> verifies API ECDH public key signature using API's public verification key
+SSDK -> derives HKDF SSDK-API SEK from SSDK ECDH private key and API ECDH public key, and session salt
+
+Payload flow:
+SSDK -> encrypts API payload with SSDK-API SEK
+SSDK -> creates forwarding request, encrypts with the SSDK-SGW SEK and sends to SGW
+SGW -> decrypts only the forwarding request (with access token) with SSDK-SGW SEK
+SGW -> verifies access token
+SGW -> sends encrypted API payload to API endpoint
+API -> decrypts API payload with SSDK-API SEK
+API -> processes request/payload
+API -> encrypts response with SSDK-API SEK
+API -> sends encrypted response to SGW
+SGW -> sends response to SSDK
+SSDK -> decrypts response with SSDK-API SEK

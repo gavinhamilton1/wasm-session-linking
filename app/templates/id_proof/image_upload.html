@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ID Upload</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .upload-container {
+            margin: 20px 0;
+            padding: 40px;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            text-align: center;
+            transition: all 0.3s ease;
+            background-color: #f8f9fa;
+            position: relative;
+            cursor: pointer;
+        }
+        .upload-container:hover {
+            border-color: #007bff;
+            background-color: rgba(0, 123, 255, 0.05);
+        }
+        .error-message {
+            color: #dc3545;
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            background-color: rgba(220, 53, 69, 0.1);
+            display: none;
+        }
+        .upload-button {
+            margin: 10px;
+            padding: 12px 24px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .upload-button:hover {
+            background-color: #0056b3;
+            transform: translateY(-1px);
+        }
+        .upload-button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .file-input {
+            display: none;
+        }
+        .preview-container {
+            display: none;
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+            text-align: center;
+        }
+        .preview-image {
+            max-width: 100%;
+            max-height: 600px;
+            margin: 20px auto;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+            object-fit: contain;
+        }
+        .rotate-controls {
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        .rotate-button {
+            padding: 8px 16px;
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .rotate-button:hover {
+            background-color: #5a6268;
+            transform: translateY(-1px);
+        }
+        .rotate-button:active {
+            transform: translateY(0);
+        }
+        .primary-text {
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: #6c757d;
+        }
+        .secondary-text {
+            color: #6c757d;
+            font-size: 14px;
+        }
+        .loading {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            justify-content: center;
+            align-items: center;
+            border-radius: 8px;
+        }
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Upload ID Document</h1>
+        <div class="upload-container" id="upload-container">
+            <input type="file" id="image-upload" class="file-input" accept="image/*">
+            <div class="primary-text">Click or drag image here</div>
+            <div class="secondary-text">Supports JPG, PNG files</div>
+            <div class="loading">
+                <div class="loading-spinner"></div>
+            </div>
+        </div>
+        <div id="errorMessage" class="error-message"></div>
+
+        <div id="preview-container" class="preview-container">
+            <canvas id="preview-canvas" style="display: none;"></canvas>
+            <img id="preview" class="preview-image">
+            <div class="rotate-controls">
+                <button class="rotate-button" data-degrees="-90">
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" width="24" height="24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    </svg>
+                    Rotate Left
+                </button>
+                <button class="rotate-button" data-degrees="90">
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" width="24" height="24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+                    </svg>
+                    Rotate Right
+                </button>
+            </div>
+            <button id="process-btn" class="upload-button">
+                <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" width="24" height="24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                Process ID
+            </button>
+        </div>
+    </div>
+
+    <script>
+        class ImageUploader {
+            constructor() {
+                this.uploadContainer = document.getElementById('upload-container');
+                this.fileInput = document.getElementById('image-upload');
+                this.preview = document.getElementById('preview');
+                this.previewContainer = document.getElementById('preview-container');
+                this.processBtn = document.getElementById('process-btn');
+                this.rotation = 0;
+                this.originalImage = null;
+                this.originalWidth = null;
+                this.originalHeight = null;
+                this.maxPreviewWidth = 800;
+                this.maxPreviewHeight = 600;
+                this.fullSizeCanvas = null;
+                this.setupEventListeners();
+            }
+
+            setupEventListeners() {
+                // Click to upload
+                this.uploadContainer.addEventListener('click', () => {
+                    this.fileInput.click();
+                });
+
+                // File selection handler
+                this.fileInput.addEventListener('change', (e) => {
+                    if (e.target.files[0]) {
+                        this.handleFileSelect(e.target.files[0]);
+                    }
+                });
+
+                // Drag and drop handlers
+                this.uploadContainer.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    this.uploadContainer.style.borderColor = '#007bff';
+                    this.uploadContainer.style.background = 'rgba(0, 123, 255, 0.05)';
+                });
+
+                this.uploadContainer.addEventListener('dragleave', (e) => {
+                    e.preventDefault();
+                    this.uploadContainer.style.borderColor = '#ccc';
+                    this.uploadContainer.style.background = '#f8f9fa';
+                });
+
+                this.uploadContainer.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    this.uploadContainer.style.borderColor = '#ccc';
+                    this.uploadContainer.style.background = '#f8f9fa';
+                    
+                    const file = e.dataTransfer.files[0];
+                    if (file && file.type.startsWith('image/')) {
+                        this.handleFileSelect(file);
+                    }
+                });
+
+                // Process button handler
+                this.processBtn.addEventListener('click', () => this.uploadImage());
+
+                // Rotation button handlers
+                document.querySelectorAll('.rotate-button').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const degrees = parseInt(btn.dataset.degrees);
+                        this.rotateImage(degrees);
+                    });
+                });
+            }
+
+            handleFileSelect(file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.originalImage = e.target.result;
+                    
+                    // Create scaled preview
+                    const img = new Image();
+                    img.onload = () => {
+                        // Create preview canvas with scaled dimensions
+                        const previewCanvas = document.getElementById('preview-canvas');
+                        const { width, height } = this.calculateScaledDimensions(img.width, img.height);
+                        previewCanvas.width = width;
+                        previewCanvas.height = height;
+                        const ctx = previewCanvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        // Store original dimensions
+                        this.originalWidth = img.width;
+                        this.originalHeight = img.height;
+                        
+                        // Update preview
+                        this.preview.src = previewCanvas.toDataURL('image/jpeg');
+                        this.previewContainer.style.display = 'block';
+                        this.preview.style.display = 'block';
+                    };
+                    img.src = this.originalImage;
+                };
+                reader.readAsDataURL(file);
+                
+                // Update upload container text
+                document.querySelector('.primary-text').textContent = file.name;
+            }
+
+            calculateScaledDimensions(width, height) {
+                let newWidth = width;
+                let newHeight = height;
+                
+                if (width > this.maxPreviewWidth || height > this.maxPreviewHeight) {
+                    const ratioWidth = this.maxPreviewWidth / width;
+                    const ratioHeight = this.maxPreviewHeight / height;
+                    const ratio = Math.min(ratioWidth, ratioHeight);
+                    
+                    newWidth = width * ratio;
+                    newHeight = height * ratio;
+                }
+                
+                return { width: newWidth, height: newHeight };
+            }
+
+            rotateImage(degrees) {
+                this.rotation = (this.rotation + degrees) % 360;
+                
+                const img = new Image();
+                
+                img.onload = () => {
+                    // Create two canvases - one for preview and one for full size
+                    const previewCanvas = document.getElementById('preview-canvas');
+                    const fullSizeCanvas = document.createElement('canvas');
+                    const { width: previewWidth, height: previewHeight } = this.calculateScaledDimensions(img.width, img.height);
+                    
+                    // Set up preview canvas
+                    if (Math.abs(this.rotation) === 90 || Math.abs(this.rotation) === 270) {
+                        previewCanvas.width = previewHeight;
+                        previewCanvas.height = previewWidth;
+                        fullSizeCanvas.width = img.height;
+                        fullSizeCanvas.height = img.width;
+                    } else {
+                        previewCanvas.width = previewWidth;
+                        previewCanvas.height = previewHeight;
+                        fullSizeCanvas.width = img.width;
+                        fullSizeCanvas.height = img.height;
+                    }
+                    
+                    // Draw rotated preview
+                    const previewCtx = previewCanvas.getContext('2d');
+                    previewCtx.save();
+                    previewCtx.translate(previewCanvas.width / 2, previewCanvas.height / 2);
+                    previewCtx.rotate(this.rotation * Math.PI / 180);
+                    previewCtx.drawImage(img, -previewWidth / 2, -previewHeight / 2, previewWidth, previewHeight);
+                    previewCtx.restore();
+                    
+                    // Draw rotated full size image
+                    const fullCtx = fullSizeCanvas.getContext('2d');
+                    fullCtx.save();
+                    fullCtx.translate(fullSizeCanvas.width / 2, fullSizeCanvas.height / 2);
+                    fullCtx.rotate(this.rotation * Math.PI / 180);
+                    fullCtx.drawImage(img, -img.width / 2, -img.height / 2);
+                    fullCtx.restore();
+                    
+                    // Store the full size canvas for upload
+                    this.fullSizeCanvas = fullSizeCanvas;
+                    
+                    // Update preview
+                    this.preview.src = previewCanvas.toDataURL('image/jpeg');
+                };
+                
+                img.src = this.originalImage;
+            }
+
+            async uploadImage() {
+                try {
+                    this.processBtn.disabled = true;
+                    this.processBtn.textContent = 'Processing...';
+                    document.querySelector('.loading').style.display = 'flex';
+
+                    // Use the full size canvas if it exists (image was rotated), otherwise use original image
+                    let imageData;
+                    if (this.fullSizeCanvas) {
+                        imageData = await new Promise(resolve => 
+                            this.fullSizeCanvas.toBlob(resolve, 'image/jpeg', 1.0)
+                        );
+                    } else {
+                        // Convert original base64 to blob
+                        const response = await fetch(this.originalImage);
+                        imageData = await response.blob();
+                    }
+
+                    if (!imageData) {
+                        throw new Error('Failed to create image blob');
+                    }
+
+                    const formData = new FormData();
+                    formData.append('file', imageData, 'image.jpg');
+
+                    const response = await fetch('/api/upload_id', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        // Submit form data to face endpoint
+                        const faceResponse = await fetch('/face', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                face_image: data.face_image,
+                                license_number: data.license_number,
+                                name: data.name,
+                                success: true
+                            })
+                        });
+
+                        // Get the HTML response and replace the current page
+                        const html = await faceResponse.text();
+                        document.open();
+                        document.write(html);
+                        document.close();
+                    } else {
+                        // Submit error to face endpoint
+                        const faceResponse = await fetch('/face', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                success: false,
+                                error: data.error || 'Upload failed'
+                            })
+                        });
+
+                        // Get the HTML response and replace the current page
+                        const html = await faceResponse.text();
+                        document.open();
+                        document.write(html);
+                        document.close();
+                    }
+                } catch (error) {
+                    console.error('Upload error:', error);
+                    // Submit error to face endpoint
+                    const faceResponse = await fetch('/face', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            success: false,
+                            error: error.message || 'Upload failed'
+                        })
+                    });
+
+                    // Get the HTML response and replace the current page
+                    const html = await faceResponse.text();
+                    document.open();
+                    document.write(html);
+                    document.close();
+                } finally {
+                    this.processBtn.disabled = false;
+                    this.processBtn.textContent = 'Process ID';
+                    document.querySelector('.loading').style.display = 'none';
+                }
+            }
+        }
+
+        // Initialize uploader
+        window.imageUploader = new ImageUploader();
+    </script>
+</body>
+</html> 

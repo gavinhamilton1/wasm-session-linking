@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scan Pass</title>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            text-align: center; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;  /* Align to top */
+            height: 100vh;
+            margin: 0;
+            padding-top: 20px;  /* Add some padding from the top */
+        }
+        #reader { 
+            width: 100%; 
+            max-width: 400px; 
+            margin: 20px auto; 
+        }
+        #result { 
+            margin-top: 20px; 
+            font-size: 18px; 
+            font-weight: bold; 
+            display: none;  /* Initially hidden */
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr;
+            flex-direction: column;  /* Default to row layout */
+            align-items: flex-start;
+            justify-content: center;
+            gap: 10px;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .qr-section {
+            text-align: center;
+            width: 300px;  /* Fixed width to match camera section */
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            z-index: 2;
+        }
+        .camera-section {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            background-color: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            z-index: 1;
+        }
+        #qr-code {
+            margin-top: 20px;
+        }
+        #camera {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transform: scaleX(-1);
+            object-fit: cover;
+        }
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transform: scaleX(-1);
+            opacity: 0;
+            object-fit: contain;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 3;
+            max-width: 90%;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .scan-region {
+            border: 2px solid #007bff;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            z-index: 2;
+            border-radius: 20px;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+        }
+        .result-section {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+            width: 100%;
+            max-width: 500px;
+            z-index: 2;
+        }
+        .result-section h3 {
+            margin-top: 0;
+            color: #007bff;
+        }
+        .result-content {
+            word-break: break-all;
+            font-family: monospace;
+            background-color: #fff;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+        }
+        #random-number {
+            margin: 5px;
+            padding: 10px;
+            color: #007bff;
+            font-size: 18px;
+            font-weight: bold;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        }
+
+        .debug-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            max-height: 30vh;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: #00ff00;
+            font-family: monospace;
+            font-size: 12px;
+            padding: 10px;
+            overflow-y: auto;
+            z-index: 9999;
+            border-top: 1px solid #444;
+            transition: max-height 0.3s ease;
+        }
+        .debug-panel.collapsed {
+            max-height: 30px;
+        }
+        .debug-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #444;
+        }
+        .debug-panel-title {
+            font-weight: bold;
+            color: #fff;
+        }
+        .debug-panel-controls {
+            display: flex;
+            gap: 10px;
+        }
+        .debug-panel-button {
+            background: none;
+            border: 1px solid #666;
+            color: #fff;
+            padding: 2px 5px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 10px;
+        }
+        .debug-panel-button:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .debug-panel-content {
+            overflow-y: auto;
+            max-height: calc(30vh - 40px);
+        }
+        .debug-log {
+            margin: 2px 0;
+            word-break: break-all;
+        }
+        .debug-log-info {
+            color: #00ff00;
+        }
+        .debug-log-error {
+            color: #ff4444;
+        }
+        .debug-log-warn {
+            color: #ffaa00;
+        }
+        .debug-log-time {
+            color: #888;
+            margin-right: 5px;
+        }
+
+        /* Media query for mobile devices */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;  /* Stack on mobile */
+                padding: 10px;
+                gap: 20px;
+                align-items: flex-start;
+                justify-content: center;
+                margin: 0 auto;
+
+    
+            }
+            .qr-section {
+                width: 100%;
+                max-width: 300px;
+            }
+            .camera-section {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+
+    <h2>Please Scan Pass</h2>
+    <div id="random-number"></div>
+    <div id="qr-code">QR code goes here</div>
+    <div class="camera-section">
+        <video id="camera" playsinline autoplay></video>
+        <canvas id="canvas"></canvas>
+        <div class="scan-region"></div>
+        <div id="status" class="status"></div>
+    </div>
+
+    <div id="resultSection" class="result-section">
+        <h3>Scanned QR Code Contents</h3>
+        <div id="resultContent" class="result-content"></div>
+    </div>
+
+
+</div>
+
+    <div id="debug-panel" class="debug-panel">
+        <div class="debug-panel-header">
+            <div class="debug-panel-title">Debug Console</div>
+            <div class="debug-panel-controls">
+                <button class="debug-panel-button" id="debug-canvas">Show Canvas</button>
+                <button class="debug-panel-button" id="debug-clear">Clear</button>
+                <button class="debug-panel-button" id="debug-toggle">Collapse</button>
+            </div>
+        </div>
+        <div class="debug-panel-content" id="debug-content"></div>
+    </div>
+
+    <script>
+        let scanning = false;
+        const video = document.getElementById("camera");
+        const canvas = document.getElementById("canvas");
+        const context = canvas.getContext("2d", { willReadFrequently: true });
+        const startButton = document.getElementById("startButton");
+        const statusDiv = document.getElementById("status");
+        const resultSection = document.getElementById("resultSection");
+        const resultContent = document.getElementById("resultContent");
+        
+        // Initialize WebSocket and other components after DOM is loaded
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                // Setup WebSocket with debug info
+                kp = await generateKeyPair();
+                getReadablePublicKey();
+                setupWebSocket();
+                
+                // Start camera after a delay
+                await setTimeout(startCamera, 1000);
+                
+                // Check WebSocket state periodically
+                setInterval(updateWebSocketState, 10000);
+                
+                // Add device info to debug panel
+                addDebugLog(`User Agent: ${navigator.userAgent}`, 'info');
+                addDebugLog(`Screen: ${window.innerWidth}x${window.innerHeight}`, 'info');
+            } catch (error) {
+                console.error("Initialization error:", error);
+            }
+        });
+                    
+
+        async function startCamera() {
+            addDebugLog("Starting camera...", 'info');
+            try {
+                // Hide result section when starting new scan
+                resultSection.style.display = "none";
+                // Show camera section
+                document.querySelector('.camera-section').style.display = "block";
+                
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { 
+                        facingMode: "user",
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
+                });
+                
+                video.srcObject = stream;
+                addDebugLog("Camera started", 'info');
+                scanning = true;
+                startScanning();
+
+                await video.play();
+        } catch (err) {
+                console.error("Camera access denied:", err);
+                startButton.style.display = "block";
+            }
+        }
+
+        function stopCamera() {
+            scanning = false;
+            const stream = video.srcObject;
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+            video.srcObject = null;
+            // Hide camera section
+            document.querySelector('.camera-section').style.display = "none";
+            addDebugLog('Camera stopped', 'info');
+        }
+
+        function startScanning() {
+            scanning = true;
+            resultSection.style.display = "none";
+            canvas.width = 1280;
+            canvas.height = 720;
+            addDebugLog("Canvas size: " + canvas.width + "x" + canvas.height, 'info');
+
+            scanQRCode();
+            addDebugLog("Scanning for QR codes...");
+        }
+
+
+        function scanQRCode() {
+            if (!scanning) return;
+
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                // Throttle scanning to every 250ms
+                setTimeout(() => {
+                    try {
+                        // Draw to canvas for QR detection only
+                        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                        
+                        addDebugLog(`Scanning frame: ${imageData.width}x${imageData.height}`, 'info');
+                        // Keep canvas invisible for normal operation
+                        //canvas.style.opacity = 0;
+
+                        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                            inversionAttempts: "dontInvert",
+                        });
+
+                        if (code) {
+                            addDebugLog(`QR Code detected: ${code.data.substring(0, 30)}`, 'error');
+                        
+                            addDebugLog("Processing QR code data (raw): ", code.data);
+                            qrdata = code.data;
+                            addDebugLog("QR code data length: ", qrdata.length);
+                            if (qrdata.length > 0) {
+                                addDebugLog("QR code data: _" + qrdata + "_", qrdata);
+                                try {
+                                    if (qrdata.includes('{')) {
+                                        const parsedData = JSON.parse(qrdata);
+                                    } else {
+                                        addDebugLog("QR code data is not a valid JSON object:", qrdata);
+                                    }
+
+                                    stopCamera();
+                                    scanning = false;
+                                    addDebugLog('QR CODE SCANNING STOPPED');
+                                    document.getElementById("resultSection").style.display = "block";
+                                    document.getElementById("resultContent").textContent = qrdata;
+                                    navigator.vibrate(250);
+                                } catch (error) {
+                                    console.error('Error:', error);
+                                }
+                                document.getElementById("resultSection").style.display = "block";
+                                document.getElementById("resultContent").textContent = code.data;
+    
+                            }
+                        }
+                    } catch (error) {
+                        console.error("Error scanning QR code:", error);
+                        addDebugLog(`Scan error: ${error.message}`, 'error');
+                    }
+
+                    requestAnimationFrame(scanQRCode);
+                }, 200);  // Throttle to every 250ms
+            } else {
+                addDebugLog(`Video not ready: ${video.readyState}`, 'warn');
+                requestAnimationFrame(scanQRCode);
+            }
+        }
+
+
+        function getSessionIdFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('sessionid') || urlParams.get('sessionId') || '1234'; // Default to '1234' if not provided
+        }
+
+        function displayQRCodeWithRandomNumber(qrData) {
+            console.log("Generating QR code with data:", qrData);
+            addDebugLog(`Generating QR code with data: ${qrData}`, 'info');
+
+            // Clear any existing QR code first
+            const qrElement = document.getElementById("qr-code");
+            qrElement.innerHTML = '';
+            
+            qrData  = "BFd7kvTY0kNItgiWM/TLXwRWC7OH6gXD3AVga0pnA48U2JMCKNQN/E7/m2735/Y5klaGNmZPVXDlcqj+MJPf+gc="
+            qrData += crypto.randomUUID();
+            new QRCode(qrElement, {
+                text: qrData || "No data available",
+                width: 300,
+                height: 300
+            });
+        }
+
+        // Debug panel functionality
+        const debugPanel = document.getElementById('debug-panel');
+        const debugContent = document.getElementById('debug-content');
+        const debugClearBtn = document.getElementById('debug-clear');
+        const debugToggleBtn = document.getElementById('debug-toggle');
+        const debugCanvasBtn = document.getElementById('debug-canvas');
+        let debugCanvasVisible = false;
+        
+        // Toggle canvas visibility for debugging
+        debugCanvasBtn.addEventListener('click', () => {
+            debugCanvasVisible = !debugCanvasVisible;
+            canvas.style.opacity = debugCanvasVisible ? 0.3 : 0;
+            debugCanvasBtn.textContent = debugCanvasVisible ? 'Hide Canvas' : 'Show Canvas';
+            addDebugLog(`Canvas visibility ${debugCanvasVisible ? 'enabled' : 'disabled'}`, 'info');
+        });
+        
+        // Clear debug panel
+        debugClearBtn.addEventListener('click', () => {
+            debugContent.innerHTML = '';
+            addDebugLog('Debug panel cleared', 'info');
+        });
+        
+        // Toggle debug panel collapse
+        debugToggleBtn.addEventListener('click', () => {
+            toggleDebugPanel();
+        });
+
+        function toggleDebugPanel() {
+            debugPanel.classList.toggle('collapsed');
+            debugToggleBtn.textContent = debugPanel.classList.contains('collapsed') ? 'Expand' : 'Collapse';
+        }
+        toggleDebugPanel();
+        
+        
+        // Function to add log to debug panel
+        function addDebugLog(message, type = 'info') {
+
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString() + '.' + now.getMilliseconds().toString().padStart(3, '0');
+            
+            const logElement = document.createElement('div');
+            logElement.className = `debug-log debug-log-${type}`;
+            
+            const timeElement = document.createElement('span');
+            timeElement.className = 'debug-log-time';
+            timeElement.textContent = `[${timeStr}]`;
+            
+            logElement.appendChild(timeElement);
+            logElement.appendChild(document.createTextNode(' ' + message));
+            
+            debugContent.appendChild(logElement);
+            //debugContent.scrollTop = debugContent.scrollHeight;
+        }
+        
+        // Override console methods to capture logs
+        const originalConsoleLog = console.log;
+        const originalConsoleError = console.error;
+        const originalConsoleWarn = console.warn;
+        const originalConsoleInfo = console.info;
+        
+        console.log = function() {
+            const args = Array.from(arguments).map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+            ).join(' ');
+            addDebugLog(args, 'info');
+            originalConsoleLog.apply(console, arguments);
+        };
+        
+        console.error = function() {
+            const args = Array.from(arguments).map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+            ).join(' ');
+            addDebugLog(args, 'error');
+            originalConsoleError.apply(console, arguments);
+        };
+        
+        console.warn = function() {
+            const args = Array.from(arguments).map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+            ).join(' ');
+            addDebugLog(args, 'warn');
+            originalConsoleWarn.apply(console, arguments);
+        };
+        
+        console.info = function() {
+            const args = Array.from(arguments).map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+            ).join(' ');
+            addDebugLog(args, 'info');
+            originalConsoleInfo.apply(console, arguments);
+        };
+        
+        // Add global error handling
+        window.addEventListener('error', function(event) {
+            addDebugLog(`ERROR: ${event.message} at ${event.filename}:${event.lineno}`, 'error');
+        });
+        
+        // Add WebSocket state monitoring
+        function updateWebSocketState() {
+            if (ws) {
+                const states = ['CONNECTING', 'OPEN', 'CLOSING', 'CLOSED'];
+                addDebugLog(`WebSocket state: ${states[ws.readyState]}`, 'info');
+            }
+        }
+        
+        // Add initial debug message
+        addDebugLog('Debug panel initialized', 'info');
+        
+        // Add network status monitoring
+        window.addEventListener('online', () => addDebugLog('Network: Online', 'info'));
+        window.addEventListener('offline', () => addDebugLog('Network: Offline', 'error'));
+        
+        // WebSocket handling with debug info
+        function setupWebSocket() {
+            const sessionId = 1234
+            const uuid = crypto.randomUUID();
+            console.log("Setting up WebSocket with session ID:", sessionId);
+            
+            // Determine if we need to use secure WebSocket (wss://) based on the page protocol
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/${sessionId}/${uuid}`;
+            
+            addDebugLog(`Connecting to WebSocket at: ${wsUrl}`, 'info');
+            
+            // Create WebSocket connection
+            const ws = new WebSocket(wsUrl);
+            
+            // Connection opened
+            ws.onopen = () => {
+                console.log('WebSocket connection established');
+                addDebugLog(`WebSocket connected with session ID: ${sessionId}`, 'info');
+                updateWebSocketState();
+            };
+            
+            // Listen for messages
+            ws.onmessage = (event) => {
+                console.log('Received from server:', event.data);
+                addDebugLog(`Received from server: ${event.data}`, 'info');
+                
+                // Display the random number prominently
+                const randomNumberElement = document.getElementById('random-number');
+                if (randomNumberElement) {
+                    displayQRCodeWithRandomNumber(event.data);
+                    randomNumberElement.textContent = `Random Number: ${event.data}`;
+                }
+            };
+            
+            // Connection closed
+            ws.onclose = (event) => {
+                console.log('WebSocket connection closed', event.code, event.reason);
+                addDebugLog(`WebSocket closed: Code ${event.code} - ${event.reason || 'No reason provided'}`, 'warn');
+                updateWebSocketState();
+                
+                // Try to reconnect after a delay
+                setTimeout(() => {
+                    addDebugLog('Attempting to reconnect WebSocket...', 'info');
+                    setupWebSocket();
+                }, 5000);
+            };
+            
+            // Connection error
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                addDebugLog('WebSocket error occurred', 'error');
+                updateWebSocketState();
+            };
+            
+            // Store the WebSocket instance globally
+            window.ws = ws;
+            return ws;
+
+        }
+
+
+async function getReadablePublicKey() {
+    let kp = await generateKeyPair();
+    let pkBuffer = await window.crypto.subtle.exportKey("raw", kp.publicKey);
+    
+    // Convert to Uint8Array
+    let pkArray = new Uint8Array(pkBuffer);
+
+    // Convert to Base64
+    let pkBase64 = btoa(String.fromCharCode(...pkArray));
+
+    // Convert to Hex
+    let pkHex = Array.from(pkArray, byte => byte.toString(16).padStart(2, "0")).join("");
+
+    console.log("PUBLIC KEY (Base64):", pkBase64);
+    console.log("PUBLIC KEY (Hex):", pkHex);
+}
+
+
+        async function generateKeyPair() {
+            let keyPair = await window.crypto.subtle.generateKey(
+                { name: "ECDH", namedCurve: "P-256" },
+                true,
+                ["deriveBits"]
+            );
+            return keyPair;
+        }
+
+        // Generate a random salt and derive a SEK
+        async function generateKeyAndDeriveSEK(publicKey) {
+// Convert Base64 salt to ArrayBuffer
+            let salt = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(16)))); // Generate a random salt
+                        // Export public key for verification
+            //let publicKey = await window.crypto.subtle.exportKey("raw", keyPair.publicKey);
+        
+            // Derive shared secret using ECDH
+            let sharedSecret = await window.crypto.subtle.deriveBits(
+                { name: "ECDH", public: keyPair.publicKey }, // Normally, we'd use the peer's public key
+                keyPair.privateKey,
+                256
+            );
+        
+            // HKDF-based SEK derivation
+            let sek = await window.crypto.subtle.importKey(
+                "raw", sharedSecret, { name: "HKDF" }, false, ["deriveKey"]
+            );
+        
+            let derivedSEK = await window.crypto.subtle.deriveBits(
+                { name: "HKDF", hash: "SHA-256", salt: salt, info: new TextEncoder().encode("Session Encryption Key") },
+                sek,
+                256
+            );
+        
+            // Convert SEK to Base64 for comparison
+            return btoa(String.fromCharCode(...new Uint8Array(derivedSEK)));
+        }
+        
+        // Example usage
+        let salt = 
+        generateKeyAndDeriveSEK(salt).then(sek => console.log("JavaScript SEK:", sek));
+
+
+    </script>
+</body>
+</html>

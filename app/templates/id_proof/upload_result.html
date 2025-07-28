@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ID Processing Results</title>
+    <style>
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .result-container {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .face-image {
+            max-width: 200px;
+            margin-top: 10px;
+            border-radius: 5px;
+        }
+        .error-message {
+            color: red;
+            margin-top: 10px;
+        }
+        .success-message {
+            color: green;
+            margin-top: 10px;
+        }
+        .back-button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .back-button:hover {
+            background-color: #0056b3;
+        }
+        .debug-info {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ID Processing Results</h1>
+        
+        {% if success %}
+            <div class="result-container">
+                <div class="success-message">Processing completed successfully!</div>
+                
+                <h2>Results:</h2>
+                <p><strong>License Number:</strong> {{ license_number or 'Not found' }}</p>
+                
+                {% if face_image %}
+                    <h3>Extracted Face:</h3>
+                    <img src="data:image/jpeg;base64,{{ face_image }}" class="face-image" alt="Extracted face"
+                         onerror="this.onerror=null; this.src=''; document.getElementById('imgError').textContent='Error loading image';">
+                    <div id="imgError" style="color: red;"></div>
+                {% else %}
+                    <p>No face was detected in the image.</p>
+                {% endif %}
+            </div>
+
+            <!-- Debug information -->
+            {% if debug %}
+            <div class="debug-info">
+                <p>Debug Info:</p>
+                <p>Face image data present: {{ 'Yes' if face_image else 'No' }}</p>
+                {% if face_image %}
+                <p>Face image data length: {{ face_image|length }}</p>
+                {% endif %}
+            </div>
+            {% endif %}
+        {% else %}
+            <div class="error-message">
+                {{ error or 'An error occurred during processing.' }}
+            </div>
+        {% endif %}
+        
+        <a href="/upload" class="back-button">Process Another ID</a>
+    </div>
+
+    <script>
+        // Add image load error handling
+        document.addEventListener('DOMContentLoaded', function() {
+            const faceImage = document.querySelector('.face-image');
+            if (faceImage) {
+                faceImage.addEventListener('error', function() {
+                    console.error('Error loading face image');
+                });
+                faceImage.addEventListener('load', function() {
+                    console.log('Face image loaded successfully');
+                });
+            }
+        });
+    </script>
+</body>
+</html> 
