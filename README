@@ -37,4 +37,12 @@ Open in browser:
     style="width: 400px; height: 600px; border: none;">
 </iframe>
 
+
+## WASM 
 wasm-pack build --target web --features debug_logs
+
+
+#to compile: wasm-pack build --target web
+#for prod: wasm-pack build --target web --release
+#mutate: wasm-tools mutate pkg/wasm_domain_verification_bg.wasm -o obfuscated.wasm
+#optimize and obfustate: wasm-opt -Oz -o obfuscated.wasm pkg/wasm_domain_verification_bg.wasm

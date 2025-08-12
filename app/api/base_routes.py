@@ -9,7 +9,6 @@ from fastapi.templating import Jinja2Templates
 import os
 import mimetypes
 import asyncio
-import random
 from typing import Dict, List, Set
 from contextlib import asynccontextmanager
 import logging
