@@ -6,10 +6,24 @@ use sha2::{Sha256, Digest};
 use toml::Value;
 use std::collections::HashMap;
 use serde_json;
+use chrono::Utc;
 
 const SECRET_FILE_NAME: &str = "secret.txt";
 
 fn main() {
+    // Only generate build timestamp when debug_logs feature is enabled
+    if cfg!(feature = "debug_logs") {
+        // Generate build timestamp
+        let build_timestamp = Utc::now();
+        let build_date = build_timestamp.format("%Y-%m-%d").to_string();
+        let build_time = build_timestamp.format("%H:%M:%S UTC").to_string();
+        
+        // Set build timestamp as environment variables
+        println!("cargo:rustc-env=BUILD_DATE={}", build_date);
+        println!("cargo:rustc-env=BUILD_TIME={}", build_time);
+        println!("cargo:rustc-env=BUILD_TIMESTAMP={}", build_timestamp.to_rfc3339());
+    }
+
     // Generate a random secret key
     let secret_key: [u8; 32] = rand::thread_rng().gen();
 
