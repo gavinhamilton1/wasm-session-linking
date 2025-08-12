@@ -17,10 +17,7 @@ pub fn render_qr_code(payload_str: &str, domain: &str) -> Result<bool, JsValue> 
     .create_element("canvas")?
     .dyn_into::<HtmlCanvasElement>()?;
     canvas.set_width(CANVAS_SIZE);
-    
-    // Only add extra height for build info when debug_logs feature is enabled
-    let canvas_height = if cfg!(feature = "debug_logs") { CANVAS_SIZE + 30 } else { CANVAS_SIZE };
-    canvas.set_height(canvas_height);
+    canvas.set_height(CANVAS_SIZE);
 
     let container = document.get_element_by_id("qr-container")
                         .expect("QR container does not exist");
@@ -42,18 +39,6 @@ pub fn render_qr_code(payload_str: &str, domain: &str) -> Result<bool, JsValue> 
                 ctx.fill_rect(x as f64 * scale, y as f64 * scale, scale, scale);
             }
         }
-    }
-
-    // Only show build date and time text when debug_logs feature is enabled
-    if cfg!(feature = "debug_logs") {
-        let build_date = option_env!("BUILD_DATE").unwrap_or("Unknown");
-        let build_time = option_env!("BUILD_TIME").unwrap_or("Unknown");
-        let build_info = format!("Built: {} {}", build_date, build_time);
-        
-        ctx.set_fill_style_str("black");
-        ctx.set_font("12px monospace");
-        ctx.set_text_align("center");
-        ctx.fill_text(&build_info, CANVAS_SIZE as f64 / 2.0, CANVAS_SIZE as f64 + 20.0)?;
     }
 
     let closure = Closure::wrap(Box::new(move || {
